@@ -1,5 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import img1 from './assets/image1.jpg';
+import img2 from './assets/Image2.jpg';
+import img3 from './assets/image3.jpg';
+import img4 from './assets/image4.jpg';
+import img5 from './assets/image5.jpg';
+import img6 from './assets/image6.jpg';
+
+// ══════════════════════════════════════════════════
+// GOOGLE SHEETS WEBHOOK — URL de tu Apps Script
+// ══════════════════════════════════════════════════
+const SHEET_WEBHOOK = 'https://script.google.com/macros/s/AKfycbyqZbKcG4vl8fLjJbcoTr0Dr6spfOMcZzUZlADSLo3cD1KVIbCWYns3yJNOB5XoAwoG/exec';
+
+// ══════════════════════════════════════════════════
+// MEGA FILE REQUEST — pega aquí tu URL de solicitud de archivo
+// Cómo obtenerla: MEGA → clic derecho en tu carpeta → "Nueva solicitud de archivo"
+// ══════════════════════════════════════════════════
+const MEGA_FILE_REQUEST = 'https://mega.nz/filerequest/cyvG56iiltU';
 
 // ══════════════════════════════════════════════════
 // TYPES & INTERFACES
@@ -95,7 +112,7 @@ function CoastalBreezeParticles() {
         const currentX = p.x + Math.sin(p.y * p.frequency + time * 0.015) * p.amplitude;
         
         ctx.beginPath();
-        ctx.strokeStyle = `rgba(197, 168, 128, ${p.opacity})`;
+        ctx.strokeStyle = `rgba(192, 169, 126, ${p.opacity})`;
         ctx.lineWidth = p.width;
         ctx.lineCap = 'round';
         
@@ -310,7 +327,9 @@ export default function WeddingInvitation() {
   });
 
   // RSVP Step-by-Step Flow states
-  const [rsvpStep, setRsvpStep] = useState<1 | 2 | 3 | 4>(1); // 1: Name, 2: Attendance, 3: Diet & Message (If YES), 4: Success
+  const [rsvpStep, setRsvpStep] = useState<1 | 2 | 3 | 4>(1);
+  const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [rsvpError, setRsvpError] = useState(false);
   const [rsvpData, setRsvpData] = useState<RSVPData>({
     nombre: '',
     asistencia: '',
@@ -322,16 +341,7 @@ export default function WeddingInvitation() {
   });
 
   // Dynamic Photo Lookbook states
-  const [initialPhotos] = useState<string[]>([
-    'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800&q=80',
-    'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1000&q=80',
-    'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=1200&q=80',
-    'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=800&q=80',
-    'https://images.unsplash.com/photo-1519741497674-611481863552?w=800&q=80',
-    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80',
-  ]);
-  const [guestPhotos, setGuestPhotos] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [initialPhotos] = useState<string[]>([img2, img5, img6, img3, img4]);
 
   // Lightbox Viewer state
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -341,8 +351,7 @@ export default function WeddingInvitation() {
   const [ringPos, setRingPos] = useState({ x: -100, y: -100 });
   const [isHovered, setIsHovered] = useState(false);
 
-  // Combined photo array for lookbook rendering
-  const allPhotos = [...guestPhotos, ...initialPhotos];
+  const allPhotos = initialPhotos;
 
   // ══════════════════════════════════════════════════
   // EFFECTS
@@ -363,7 +372,7 @@ export default function WeddingInvitation() {
 
   // 2. Astronomical Countdown clock logic
   useEffect(() => {
-    const target = new Date('2026-12-21T18:00:00');
+    const target = new Date('2026-09-04T15:00:00');
 
     const calculateTime = () => {
       const diff = target.getTime() - new Date().getTime();
@@ -496,41 +505,55 @@ export default function WeddingInvitation() {
   };
 
   // RSVP Form Progression
-  const handleNextStep = () => {
-    if (rsvpStep === 1 && !rsvpData.nombre.trim()) return;
+  const handleNextStep = async () => {
+    if (rsvpStep === 1) {
+      if (rsvpData.nombre.trim()) setRsvpStep(2);
+      return;
+    }
     if (rsvpStep === 2 && !rsvpData.asistencia) return;
-
     if (rsvpStep === 2) {
-      if (rsvpData.asistencia === 'no') {
-        handleSubmitRSVP();
-      } else {
-        setRsvpStep(3);
-      }
+      rsvpData.asistencia === 'no' ? await handleSubmitRSVP() : setRsvpStep(3);
     } else if (rsvpStep === 3) {
-      handleSubmitRSVP();
+      await handleSubmitRSVP();
     }
   };
 
-  // RSVP Submit with values printed in console
-  const handleSubmitRSVP = () => {
-    console.log("💍 Confirmación RSVP enviada con éxito:", rsvpData);
+  // RSVP Submit → Google Sheets via Apps Script webhook
+  const handleSubmitRSVP = async () => {
+    setRsvpLoading(true);
+    setRsvpError(false);
+
+    const payload = {
+      fecha: new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }),
+      nombre: rsvpData.nombre,
+      telefono: rsvpData.telefono || '—',
+      asistencia: rsvpData.asistencia === 'si' ? 'Sí asiste' : 'No asiste',
+      personas: rsvpData.asistencia === 'si' ? rsvpData.personas : 0,
+      dieta: rsvpData.dieta,
+      alergias: rsvpData.alergiaDetalles || '—',
+      mensaje: rsvpData.mensaje || '—',
+    };
+
+    // Solo envía al webhook si ya tiene URL real configurada
+    // mode: 'no-cors' evita el bloqueo CORS de Apps Script;
+    // los datos llegan a la hoja aunque la respuesta sea opaca.
+    if (SHEET_WEBHOOK.startsWith('https://')) {
+      try {
+        await fetch(SHEET_WEBHOOK, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload),
+        });
+      } catch (err) {
+        console.warn('RSVP webhook error:', err);
+      }
+    }
+
+    setRsvpLoading(false);
     setRsvpStep(4);
   };
 
-  // Dynamic Photo upload handler (creates temporary local URLs)
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
-      const newUrls = filesArray.map(file => URL.createObjectURL(file));
-      setGuestPhotos(prev => [...newUrls, ...prev]);
-    }
-  };
-
-  const triggerFileInput = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
 
   // Lightbox Navigation
   const navigateLightbox = (direction: number, e: React.MouseEvent) => {
@@ -543,10 +566,10 @@ export default function WeddingInvitation() {
   // Google Calendar URL builder
   const handleGoogleCalendar = (e: React.MouseEvent) => {
     e.preventDefault();
-    const title = encodeURIComponent("Boda de Jaime & Lucía");
-    const details = encodeURIComponent("Tenemos el honor de invitarlos a celebrar nuestro enlace matrimonial.\n\n18:00 hrs - Ceremonia Religiosa: Catedral de Guadalajara\n19:15 hrs - Ceremonia Civil y Recepción: Hacienda el Centenario, Tequila, Jalisco");
-    const location = encodeURIComponent("Hacienda el Centenario, Tequila, Jalisco");
-    const dates = "20261221T180000/20261222T040000";
+    const title = encodeURIComponent("Boda de Andrea & Gustavo");
+    const details = encodeURIComponent("¡Tenemos el honor de invitarlos a celebrar nuestro enlace matrimonial!\n\n15:00 hrs - Ceremonia Religiosa · Puerto Vallarta\n16:50 hrs - Ceremonia Frente al Mar · Puerto Vallarta\n18:00 hrs - Recepción · Puerto Vallarta\n23:30 hrs - After Party (Opcional) · Puerto Vallarta");
+    const location = encodeURIComponent("Puerto Vallarta, Jalisco");
+    const dates = "20260904T150000/20260905T030000";
     const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}&location=${location}`;
     window.open(url, '_blank');
   };
@@ -559,11 +582,11 @@ export default function WeddingInvitation() {
       "VERSION:2.0",
       "BEGIN:VEVENT",
       "CLASS:PUBLIC",
-      "DESCRIPTION:Tenemos el honor de invitarlos a celebrar nuestro enlace matrimonial.\\n\\n18:00 hrs - Ceremonia Religiosa: Catedral de Guadalajara\\n19:15 hrs - Ceremonia Civil y Recepción: Hacienda el Centenario, Tequila, Jalisco",
-      "DTSTART:20261221T180000",
-      "DTEND:20261222T040000",
-      "LOCATION:Hacienda el Centenario\\, Tequila\\, Jalisco",
-      "SUMMARY:Boda de Jaime & Lucía",
+      "DESCRIPTION:¡Tenemos el honor de invitarlos a celebrar nuestro enlace matrimonial!\\n\\n15:00 hrs - Ceremonia Religiosa · Puerto Vallarta\\n16:50 hrs - Ceremonia Frente al Mar\\n18:00 hrs - Recepción\\n23:30 hrs - After Party (Opcional)",
+      "DTSTART:20260904T150000",
+      "DTEND:20260905T030000",
+      "LOCATION:Puerto Vallarta\\, Jalisco",
+      "SUMMARY:Boda de Andrea & Gustavo",
       "TRANSP:OPAQUE",
       "END:VEVENT",
       "END:VCALENDAR"
@@ -572,7 +595,7 @@ export default function WeddingInvitation() {
     const blob = new Blob([icsData], { type: "text/calendar;charset=utf-8" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = "Boda_Jaime_y_Lucia.ics";
+    link.download = "Boda_Andrea_y_Gustavo.ics";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -604,7 +627,7 @@ export default function WeddingInvitation() {
           top: `${mousePos.y}px`,
           width: isHovered ? '4px' : '6px',
           height: isHovered ? '4px' : '6px',
-          backgroundColor: isHovered ? '#1C2D37' : '#C5A880'
+          backgroundColor: isHovered ? '#52644E' : '#C0A97E'
         }}
       />
       <div
@@ -614,7 +637,7 @@ export default function WeddingInvitation() {
           top: `${ringPos.y}px`,
           width: isHovered ? '42px' : '28px',
           height: isHovered ? '42px' : '28px',
-          borderColor: isHovered ? '#C5A880' : 'rgba(197, 168, 128, 0.4)',
+          borderColor: isHovered ? '#C0A97E' : 'rgba(192, 169, 126, 0.4)',
           backgroundColor: isHovered ? 'rgba(197, 168, 128, 0.05)' : 'transparent',
           transform: `translate(-50%, -50%) scale(${isHovered ? 1.1 : 1})`
         }}
@@ -638,13 +661,13 @@ export default function WeddingInvitation() {
 
       {/* ══ SOBRE VIRTUAL 3D (ENTRADA INMERSIVA) ══ */}
       <div
-        className={`fixed inset-0 z-[10005] bg-gradient-radial from-[#FAF8F5] to-[#EAE3D2] flex items-center justify-center overflow-hidden transition-all duration-[1500ms] cubic-bezier(0.22, 1, 0.36, 1) perspective-[1600px] ${isEnvelopeFadeOut ? 'opacity-0 pointer-events-none invisible' : ''}`}
+        className={`fixed inset-0 z-[10005] bg-gradient-radial from-[#F5F0E6] to-[#D9CCAA] flex items-center justify-center overflow-hidden transition-all duration-[1500ms] cubic-bezier(0.22, 1, 0.36, 1) perspective-[1600px] ${isEnvelopeFadeOut ? 'opacity-0 pointer-events-none invisible' : ''}`}
         style={{
-          background: 'radial-gradient(circle at center, #FAF8F5 0%, #EAE3D2 100%)'
+          background: 'radial-gradient(circle at center, #F5F0E6 0%, #D9CCAA 100%)'
         }}
       >
         <div className="absolute font-display text-[140px] md:text-[280px] lg:text-[380px] text-accent-gold/[0.04] pointer-events-none select-none z-0 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          J & L
+          A & G
         </div>
 
         {/* Outer 3D Envelope Base container */}
@@ -684,7 +707,7 @@ export default function WeddingInvitation() {
 
           {/* Lower Pocket Pouch cover */}
           <div
-            className="absolute left-0 right-0 bottom-0 h-[170px] bg-[#17252E] border-t border-accent-gold/22 pointer-events-none shadow-lg shadow-black/18"
+            className="absolute left-0 right-0 bottom-0 h-[170px] bg-[#1E2B1A] border-t border-accent-gold/22 pointer-events-none shadow-lg shadow-black/18"
             style={{
               clipPath: 'polygon(0 20px, 50% 0, 100% 20px, 100% 100%, 0 100%)',
               zIndex: 3
@@ -703,7 +726,7 @@ export default function WeddingInvitation() {
               borderRadius: '48% 52% 47% 53% / 52% 48% 54% 46%'
             }}
           >
-            <span className="font-display text-[13px] font-bold text-white/90 drop-shadow-md tracking-tighter">J & L</span>
+            <span className="font-display text-[13px] font-bold text-white/90 drop-shadow-md tracking-tighter">A & G</span>
           </div>
 
           {/* Card Emerging inside (Interactive 3D Tilt) */}
@@ -724,12 +747,12 @@ export default function WeddingInvitation() {
                 <SunGlintOverlay periodic={true} />
                 <div className="absolute inset-1.5 border border-accent-gold/18 rounded-[4px] pointer-events-none z-10"></div>
                 <div className="font-display text-2xl text-coastal-800 tracking-wider mb-1 relative z-10">
-                  J & L
+                  A & G
                   <span className="block text-[10px] text-accent-gold mt-1 font-sans opacity-65">✻</span>
                 </div>
                 <div className="font-serif uppercase text-[9px] tracking-super text-accent-bronze font-semibold mb-3 relative z-10">Enlace Matrimonial</div>
-                <div className="font-serif italic font-light text-lg text-coastal-800 leading-tight relative z-10">Jaime<br />&amp;<br />Lucía</div>
-                <div className="font-serif text-[10px] tracking-wide text-accent-bronze mt-3.5 uppercase relative z-10">21 · 12 · 2026</div>
+                <div className="font-serif italic font-light text-lg text-coastal-800 leading-tight relative z-10">Andrea<br />&amp;<br />Gustavo</div>
+                <div className="font-serif text-[10px] tracking-wide text-accent-bronze mt-3.5 uppercase relative z-10">04 · 09 · 2026</div>
               </div>
             </Interactive3DTilt>
           </div>
@@ -763,7 +786,7 @@ export default function WeddingInvitation() {
             <img
               className="max-w-full max-h-[80vh] object-contain shadow-2xl border border-white/5 rounded-sm transition-transform duration-700 ease-out scale-100"
               src={allPhotos[lightboxIndex]}
-              alt="Lookbook Boda Jaime y Lucía"
+              alt="Lookbook Boda Andrea y Gustavo"
             />
 
             <button
@@ -780,43 +803,46 @@ export default function WeddingInvitation() {
       {/* ══ PRELOADER ══ */}
       <div id="preloader" className={isPreloaderHidden ? 'hidden' : ''}>
         <div className="monogram">
-          <span className="monogram-initial">J</span>
+          <span className="monogram-initial">A</span>
           <span className="monogram-amp">&amp;</span>
-          <span className="monogram-initial">L</span>
+          <span className="monogram-initial">G</span>
         </div>
         <div className="monogram-line-h"></div>
-        <p className="monogram-sub">XXI · XII · MMXXVI</p>
+        <p className="monogram-sub">IV · IX · MMXXVI</p>
       </div>
 
       {/* ══ NAV BAR (GLASSMORPHISM EDITORIAL) ══ */}
-      <nav className="fixed top-0 left-0 right-0 z-50 h-16 flex items-center justify-center bg-sand-50/80 backdrop-blur-md border-b border-sand-200/40 px-6 select-none">
-        <div className="flex items-center gap-1 md:gap-3">
-          <a href="#itinerario" className="font-sans text-[9px] md:text-[10px] uppercase tracking-super text-coastal-800/70 hover:text-coastal-800 transition-all duration-300 px-3 py-2 font-medium cursor-none" {...cursorHoverProps}>Itinerario</a>
-          <span className="w-[3px] h-[3px] rounded-full bg-accent-gold/40"></span>
-          <a href="#dresscode" className="font-sans text-[9px] md:text-[10px] uppercase tracking-super text-coastal-800/70 hover:text-coastal-800 transition-all duration-300 px-3 py-2 font-medium cursor-none" {...cursorHoverProps}>Indumentaria</a>
-          <span className="w-[3px] h-[3px] rounded-full bg-accent-gold/40"></span>
-          <a href="#regalos" className="font-sans text-[9px] md:text-[10px] uppercase tracking-super text-coastal-800/70 hover:text-coastal-800 transition-all duration-300 px-3 py-2 font-medium cursor-none" {...cursorHoverProps}>Regalos</a>
-          <span className="w-[3px] h-[3px] rounded-full bg-accent-gold/40"></span>
-          <a href="#hospedaje" className="font-sans text-[9px] md:text-[10px] uppercase tracking-super text-coastal-800/70 hover:text-coastal-800 transition-all duration-300 px-3 py-2 font-medium cursor-none" {...cursorHoverProps}>Hospedaje</a>
-          <span className="w-[3px] h-[3px] rounded-full bg-accent-gold/40"></span>
-          <a href="#rsvp" className="font-sans text-[9px] md:text-[10px] uppercase tracking-super text-coastal-800/70 hover:text-coastal-800 transition-all duration-300 px-3 py-2 font-medium cursor-none" {...cursorHoverProps}>Asistencia</a>
+      <nav className="fixed top-0 left-0 right-0 z-50 h-14 md:h-16 flex items-center bg-sand-50/80 backdrop-blur-md border-b border-sand-200/40 select-none">
+        <div
+          className="flex items-center w-full px-3 md:px-6 md:justify-center overflow-x-auto"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+        >
+          <a href="#itinerario" className="font-sans text-[8px] md:text-[10px] uppercase tracking-[0.12em] md:tracking-super text-coastal-800/70 hover:text-coastal-800 transition-all duration-300 px-2 md:px-3 py-2 font-medium cursor-none whitespace-nowrap flex-shrink-0" {...cursorHoverProps}>Itinerario</a>
+          <span className="w-[3px] h-[3px] rounded-full bg-accent-gold/40 flex-shrink-0 mx-0.5 md:mx-0"></span>
+          <a href="#dresscode" className="font-sans text-[8px] md:text-[10px] uppercase tracking-[0.12em] md:tracking-super text-coastal-800/70 hover:text-coastal-800 transition-all duration-300 px-2 md:px-3 py-2 font-medium cursor-none whitespace-nowrap flex-shrink-0" {...cursorHoverProps}>Vestimenta</a>
+          <span className="w-[3px] h-[3px] rounded-full bg-accent-gold/40 flex-shrink-0 mx-0.5 md:mx-0"></span>
+          <a href="#regalos" className="font-sans text-[8px] md:text-[10px] uppercase tracking-[0.12em] md:tracking-super text-coastal-800/70 hover:text-coastal-800 transition-all duration-300 px-2 md:px-3 py-2 font-medium cursor-none whitespace-nowrap flex-shrink-0" {...cursorHoverProps}>Regalos</a>
+          <span className="w-[3px] h-[3px] rounded-full bg-accent-gold/40 flex-shrink-0 mx-0.5 md:mx-0"></span>
+          <a href="#hospedaje" className="font-sans text-[8px] md:text-[10px] uppercase tracking-[0.12em] md:tracking-super text-coastal-800/70 hover:text-coastal-800 transition-all duration-300 px-2 md:px-3 py-2 font-medium cursor-none whitespace-nowrap flex-shrink-0" {...cursorHoverProps}>Hospedaje</a>
+          <span className="w-[3px] h-[3px] rounded-full bg-accent-gold/40 flex-shrink-0 mx-0.5 md:mx-0"></span>
+          <a href="#rsvp" className="font-sans text-[8px] md:text-[10px] uppercase tracking-[0.12em] md:tracking-super text-coastal-800/70 hover:text-coastal-800 transition-all duration-300 px-2 md:px-3 py-2 font-medium cursor-none whitespace-nowrap flex-shrink-0" {...cursorHoverProps}>Asistencia</a>
         </div>
       </nav>
 
       {/* ══ HERO SECTION (LOOKBOOK LUXURY SUNSET) ══ */}
       <section className="min-h-screen flex flex-col items-center justify-center text-center px-6 py-24 relative overflow-hidden select-none">
-        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat filter brightness-[0.4] saturate-[0.6] transition-transform duration-[4000ms] ease-out scale-105 hover:scale-100" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1800&q=80')" }}></div>
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat filter brightness-[0.45] saturate-[0.7] transition-transform duration-[4000ms] ease-out scale-105 hover:scale-100" style={{ backgroundImage: `url(${img2})` }}></div>
         <div className="absolute inset-0 bg-gradient-to-t from-coastal-900 via-transparent to-coastal-900/60 z-0"></div>
 
         <div className="relative z-10 flex flex-col items-center max-w-3xl mx-auto w-full">
-          <p className="font-serif italic text-xs md:text-sm text-accent-gold tracking-widest mb-6 reveal">Sábado · 21 de Diciembre · 2026</p>
+          <p className="font-serif italic text-xs md:text-sm text-accent-gold tracking-widest mb-6 reveal">Viernes · 4 de Septiembre · 2026</p>
 
           <div className="w-[1px] h-12 bg-gradient-to-b from-transparent to-accent-gold/50 mb-6 reveal reveal-d1"></div>
 
           <h1 className="font-serif italic font-light text-5xl md:text-7xl lg:text-8xl text-white/95 tracking-wide leading-none mb-4 select-text flex flex-wrap justify-center items-center">
-            <ElegantTextReveal text="Jaime" className="font-serif font-light text-white/95" />
+            <ElegantTextReveal text="Andrea" className="font-serif font-light text-white/95" />
             <span className="font-serif font-light italic text-accent-gold/90 text-4xl md:text-6xl lg:text-7xl mx-3 -translate-y-1 block select-none">&amp;</span>
-            <ElegantTextReveal text="Lucía" className="font-serif font-light text-white/95" delay={0.2} />
+            <ElegantTextReveal text="Gustavo" className="font-serif font-light text-white/95" delay={0.2} />
           </h1>
 
           <div className="flex items-center justify-center gap-4 mb-6 reveal reveal-d2">
@@ -825,7 +851,7 @@ export default function WeddingInvitation() {
             <span className="w-8 h-[1px] bg-accent-gold/30"></span>
           </div>
 
-          <p className="font-sans text-[10px] md:text-xs tracking-super uppercase text-white/40 mb-8 reveal reveal-d2">XXI · XII · MMXXVI</p>
+          <p className="font-sans text-[10px] md:text-xs tracking-super uppercase text-white/40 mb-8 reveal reveal-d2">IV · IX · MMXXVI</p>
 
           <div className="flex flex-wrap justify-center gap-3 mb-12 reveal reveal-d3">
             <a href="#" className="font-sans text-[8px] md:text-[9px] tracking-wider uppercase border border-white/20 hover:border-accent-gold text-white/70 hover:text-white px-5 py-2.5 transition-all duration-500 bg-white/5 hover:bg-accent-gold/10 rounded-sm cursor-none relative group overflow-hidden" onClick={handleGoogleCalendar} {...cursorHoverProps}>
@@ -849,15 +875,15 @@ export default function WeddingInvitation() {
             <div className="absolute inset-1.5 border border-accent-gold/10 rounded-[1px] pointer-events-none"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
               <div className="text-center">
-                <p className="font-sans text-[8px] tracking-super uppercase text-accent-gold/70 mb-3">Padres de la Novia</p>
+                <p className="font-sans text-[8px] tracking-super uppercase text-accent-gold/70 mb-3">Madre de la Novia</p>
                 <p className="font-serif italic font-light text-[14px] md:text-[15px] text-white/80 leading-relaxed">
-                  Jorge Elizondo García<br />&amp; Amparo Romero Garza
+                  María de la Luz Hernández Cruz
                 </p>
               </div>
               <div className="text-center">
-                <p className="font-sans text-[8px] tracking-super uppercase text-accent-gold/70 mb-3">Padres del Novio</p>
+                <p className="font-sans text-[8px] tracking-super uppercase text-accent-gold/70 mb-3">Padre del Novio</p>
                 <p className="font-serif italic font-light text-[14px] md:text-[15px] text-white/80 leading-relaxed">
-                  Jaime Torres Ortiz<br />&amp; Paola Ledezma Báez
+                  Gustavo Luján Flores
                 </p>
               </div>
             </div>
@@ -867,6 +893,75 @@ export default function WeddingInvitation() {
             <span className="font-serif italic text-[8.5px] tracking-widest text-accent-gold/70 uppercase">Descubrir</span>
             <div className="w-[1px] h-10 bg-gradient-to-b from-accent-gold/60 to-transparent"></div>
           </a>
+        </div>
+      </section>
+
+      {/* ══ FECHA OFICIAL — IMAGEN PROTAGONISTA ══ */}
+      <section className="py-20 md:py-28 px-6 bg-sand-50 border-b border-sand-200/40 select-none overflow-hidden">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-10">
+            <span className="font-sans text-[9px] tracking-super uppercase text-accent-gold block mb-3 reveal">¡Lo dijimos!</span>
+            <h2 className="font-serif italic font-light text-3xl md:text-4xl text-coastal-800 tracking-wide flex justify-center">
+              <ElegantTextReveal text="We Said I Do" />
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 items-center">
+
+            {/* Imagen protagonista — grande y con 3D tilt */}
+            <Interactive3DTilt maxRotation={5} className="md:col-span-7 reveal reveal-d1">
+              <div className="relative overflow-hidden rounded-sm border border-accent-gold/35 shadow-2xl group">
+                <SunGlintOverlay periodic={true} />
+                <img
+                  src={img1}
+                  alt="Andrea y Gustavo — Oficialmente casados 04.09.26"
+                  className="w-full object-cover filter saturate-[0.92] brightness-[1.02] group-hover:saturate-100 transition-all duration-1000 ease-out"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-coastal-900/55 via-transparent to-transparent pointer-events-none z-10"></div>
+                <div className="absolute bottom-6 left-0 right-0 text-center z-20 px-4">
+                  <p className="font-display text-white text-xl md:text-3xl tracking-widest drop-shadow-lg">04 · 09 · 2026</p>
+                  <p className="font-serif italic text-white/75 text-xs md:text-sm mt-1 tracking-widest drop-shadow">Puerto Vallarta, Jalisco</p>
+                </div>
+              </div>
+            </Interactive3DTilt>
+
+            {/* Panel de texto derecho */}
+            <div className="md:col-span-5 flex flex-col items-center md:items-start text-center md:text-left gap-6 reveal reveal-d2 px-2 md:px-0">
+
+              <div className="w-10 h-[1px] bg-accent-gold/60 hidden md:block"></div>
+
+              <p className="font-sans text-[8px] tracking-super uppercase text-accent-gold font-semibold">Enlace Matrimonial</p>
+
+              <p className="font-serif italic font-light text-4xl md:text-5xl text-coastal-800 leading-tight">
+                Andrea<br />
+                <span className="text-accent-gold text-2xl md:text-3xl font-light">&amp;</span><br />
+                Gustavo
+              </p>
+
+              <div className="flex flex-col gap-3 border-l-0 md:border-l border-accent-gold/30 md:pl-6">
+                <div className="flex items-baseline gap-3">
+                  <span className="font-sans text-[7.5px] tracking-super uppercase text-accent-bronze">Fecha</span>
+                  <span className="font-serif italic text-coastal-800 text-sm">04 de Septiembre, 2026</span>
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="font-sans text-[7.5px] tracking-super uppercase text-accent-bronze">Lugar</span>
+                  <span className="font-serif italic text-coastal-800 text-sm">Puerto Vallarta, Jalisco</span>
+                </div>
+                <div className="flex items-baseline gap-3">
+                  <span className="font-sans text-[7.5px] tracking-super uppercase text-accent-bronze">Hora</span>
+                  <span className="font-serif italic text-coastal-800 text-sm">15:00 hrs</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 mt-2">
+                <span className="w-6 h-[1px] bg-accent-gold/40"></span>
+                <span className="font-serif italic text-[11px] text-coastal-800/50 tracking-wider">IV · IX · MMXXVI</span>
+                <span className="w-6 h-[1px] bg-accent-gold/40"></span>
+              </div>
+
+            </div>
+
+          </div>
         </div>
       </section>
 
@@ -923,87 +1018,179 @@ export default function WeddingInvitation() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-16 select-text">
+          <div className="flex flex-col gap-12 mt-8 select-text">
 
-            {/* Bento Item 1: Coastal Visual Card */}
-            <Interactive3DTilt maxRotation={3} className="md:col-span-4 h-64 md:h-auto overflow-hidden bg-white border border-sand-200/60 rounded-sm relative group reveal">
-              <div className="absolute inset-0 bg-cover bg-center filter brightness-[0.7] saturate-[0.8] transition-transform duration-1000 group-hover:scale-105" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=600&q=80')" }}></div>
-              <div className="absolute inset-0 bg-gradient-to-t from-coastal-900/60 via-transparent to-transparent z-10"></div>
-              <div className="absolute bottom-6 left-6 right-6 z-20">
-                <span className="font-serif italic text-white/90 text-lg">"Frente a la inmensidad del mar..."</span>
+            {/* ── DÍA 03 SEPTIEMBRE ── */}
+            <div>
+              <div className="flex items-center gap-3 mb-6 reveal">
+                <div className="w-6 h-[1px] bg-accent-gold/50 shrink-0"></div>
+                <span className="font-sans text-[8px] tracking-super uppercase text-accent-gold font-semibold whitespace-nowrap">Miércoles · 03 de Septiembre</span>
+                <div className="flex-1 h-[1px] bg-accent-gold/20"></div>
               </div>
-            </Interactive3DTilt>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <Interactive3DTilt maxRotation={3} className="md:col-span-4 h-56 md:h-auto overflow-hidden bg-white border border-sand-200/60 rounded-sm relative group reveal">
+                  <div className="absolute inset-0 bg-cover bg-center filter brightness-[0.75] saturate-[0.85] transition-transform duration-1000 group-hover:scale-105" style={{ backgroundImage: `url(${img6})` }}></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-coastal-900/60 via-transparent to-transparent z-10"></div>
+                  <div className="absolute bottom-6 left-6 right-6 z-20">
+                    <span className="font-serif italic text-white/90 text-base">"Bienvenidos a Puerto Vallarta..."</span>
+                  </div>
+                </Interactive3DTilt>
 
-            {/* Bento Item 2: Ceremonia Religiosa */}
-            <Interactive3DTilt maxRotation={4} className="md:col-span-8 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group overflow-hidden reveal reveal-d1">
-              <SunGlintOverlay periodic={true} />
-              <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">01</span>
-              <div className="relative z-10 font-sans">
-                <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">18:00 hrs</p>
-                <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-6">Ceremonia Religiosa</h3>
-                <p className="font-serif italic text-[14px] md:text-[15px] text-accent-bronze/90 leading-relaxed mb-8 max-w-md">
-                  Catedral de Guadalajara<br />
-                  <span className="font-sans not-italic text-[11px] text-coastal-800/60 block mt-2">Av. Fray Antonio Alcalde 10 · Centro, Guadalajara, Jal.</span>
-                </p>
+                <Interactive3DTilt maxRotation={4} className="md:col-span-8 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group overflow-hidden reveal reveal-d1">
+                  <SunGlintOverlay periodic={true} />
+                  <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">01</span>
+                  <div className="relative z-10 font-sans">
+                    <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">15:00 hrs</p>
+                    <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-6">Recepción de Bienvenida</h3>
+                    <p className="font-serif italic text-[14px] md:text-[15px] text-accent-bronze/90 leading-relaxed mb-8 max-w-md">
+                      Hotel Meliá<br />
+                      <span className="font-sans not-italic text-[11px] text-coastal-800/60 block mt-2">Puerto Vallarta, Jalisco</span>
+                    </p>
+                  </div>
+                  <a className="self-start inline-flex items-center gap-2 font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/20 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm cursor-none relative overflow-hidden z-10" href="https://maps.app.goo.gl/37bXyMvnZqbDVrEt9" target="_blank" rel="noopener" {...cursorHoverProps}>
+                    <SunGlintOverlay periodic={false} />
+                    <svg className="w-3 h-3 stroke-current fill-none relative z-10" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                    <span className="relative z-10">Ver en Mapa</span>
+                  </a>
+                </Interactive3DTilt>
               </div>
-              <a className="self-start inline-flex items-center gap-2 font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/20 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm cursor-none relative overflow-hidden z-10" href="https://maps.google.com/?q=Catedral+de+Guadalajara" target="_blank" rel="noopener" {...cursorHoverProps}>
-                <SunGlintOverlay periodic={false} />
-                <svg className="w-3 h-3 stroke-current fill-none relative z-10" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                <span className="relative z-10">Ver en Mapa</span>
-              </a>
-            </Interactive3DTilt>
+            </div>
 
-            {/* Bento Item 3: Ceremonia Civil */}
-            <Interactive3DTilt maxRotation={4} className="md:col-span-7 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group overflow-hidden reveal reveal-d2">
-              <SunGlintOverlay periodic={true} />
-              <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">02</span>
-              <div className="relative z-10 font-sans">
-                <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">19:15 hrs</p>
-                <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-6">Ceremonia Civil</h3>
-                <p className="font-serif italic text-[14px] md:text-[15px] text-accent-bronze/90 leading-relaxed mb-8 max-w-md">
-                  Hacienda el Centenario<br />
-                  <span className="font-sans not-italic text-[11px] text-coastal-800/60 block mt-2">Lerdo de Tejada s/n · Centro, Tequila, Jal.</span>
-                </p>
+            {/* ── DÍA 04 SEPTIEMBRE ── */}
+            <div>
+              <div className="flex items-center gap-3 mb-6 reveal">
+                <div className="w-6 h-[1px] bg-accent-gold/50 shrink-0"></div>
+                <span className="font-sans text-[8px] tracking-super uppercase text-accent-gold font-semibold whitespace-nowrap">Jueves · 04 de Septiembre · ✦ El Gran Día</span>
+                <div className="flex-1 h-[1px] bg-accent-gold/20"></div>
               </div>
-              <a className="self-start inline-flex items-center gap-2 font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/20 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm cursor-none relative overflow-hidden z-10" href="https://maps.google.com/?q=Hacienda+el+Centenario+Tequila+Jalisco" target="_blank" rel="noopener" {...cursorHoverProps}>
-                <SunGlintOverlay periodic={false} />
-                <svg className="w-3 h-3 stroke-current fill-none relative z-10" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                <span className="relative z-10">Ver en Mapa</span>
-              </a>
-            </Interactive3DTilt>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <Interactive3DTilt maxRotation={4} className="md:col-span-6 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group overflow-hidden reveal">
+                  <SunGlintOverlay periodic={true} />
+                  <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">02</span>
+                  <div className="relative z-10 font-sans">
+                    <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">15:00 hrs</p>
+                    <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-6">Ceremonia Religiosa</h3>
+                    <p className="font-serif italic text-[14px] md:text-[15px] text-accent-bronze/90 leading-relaxed mb-8 max-w-md">
+                      Puerto Vallarta, Jalisco
+                    </p>
+                  </div>
+                  <a className="self-start inline-flex items-center gap-2 font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/20 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm cursor-none relative overflow-hidden z-10" href="https://maps.app.goo.gl/LZ1S5pERpwhM9nym6" target="_blank" rel="noopener" {...cursorHoverProps}>
+                    <SunGlintOverlay periodic={false} />
+                    <svg className="w-3 h-3 stroke-current fill-none relative z-10" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                    <span className="relative z-10">Ver en Mapa</span>
+                  </a>
+                </Interactive3DTilt>
 
-            {/* Bento Item 4: Landscape Visual */}
-            <Interactive3DTilt maxRotation={3} className="md:col-span-5 h-64 md:h-auto overflow-hidden bg-white border border-sand-200/60 rounded-sm relative group reveal reveal-d2">
-              <div className="absolute inset-0 bg-cover bg-center filter brightness-[0.7] saturate-[0.8] transition-transform duration-1000 group-hover:scale-105" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=600&q=80')" }}></div>
-              <div className="absolute inset-0 bg-gradient-to-t from-coastal-900/60 via-transparent to-transparent z-10"></div>
-              <div className="absolute bottom-6 left-6 right-6 z-20">
-                <span className="font-serif italic text-white/90 text-lg">"Bajo el cielo dorado de Tequila..."</span>
-              </div>
-            </Interactive3DTilt>
+                <Interactive3DTilt maxRotation={4} className="md:col-span-6 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group overflow-hidden reveal reveal-d1">
+                  <SunGlintOverlay periodic={true} />
+                  <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">03</span>
+                  <div className="relative z-10 font-sans">
+                    <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">16:50 hrs</p>
+                    <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-6">Ceremonia Frente al Mar</h3>
+                    <p className="font-serif italic text-[14px] md:text-[15px] text-accent-bronze/90 leading-relaxed mb-8 max-w-md">
+                      Puerto Vallarta, Jalisco
+                    </p>
+                  </div>
+                  <a className="self-start inline-flex items-center gap-2 font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/20 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm cursor-none relative overflow-hidden z-10" href="https://maps.app.goo.gl/9eDntodSdtcUwB1Z7" target="_blank" rel="noopener" {...cursorHoverProps}>
+                    <SunGlintOverlay periodic={false} />
+                    <svg className="w-3 h-3 stroke-current fill-none relative z-10" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                    <span className="relative z-10">Ver en Mapa</span>
+                  </a>
+                </Interactive3DTilt>
 
-            {/* Bento Item 5: Recepción */}
-            <Interactive3DTilt maxRotation={4} className="md:col-span-6 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group overflow-hidden reveal reveal-d3">
-              <SunGlintOverlay periodic={true} />
-              <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">03</span>
-              <div className="relative z-10">
-                <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">20:00 hrs</p>
-                <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-4">Recepción</h3>
-                <p className="font-serif italic text-[14px] md:text-[15px] text-accent-bronze/90 leading-relaxed mb-4">Hacienda el Centenario</p>
-                <p className="font-sans text-[11px] text-coastal-800/60 leading-relaxed">Tequila, Jalisco</p>
-              </div>
-            </Interactive3DTilt>
+                <Interactive3DTilt maxRotation={3} className="md:col-span-5 h-56 md:h-auto overflow-hidden bg-white border border-sand-200/60 rounded-sm relative group reveal reveal-d2">
+                  <div className="absolute inset-0 bg-cover bg-center filter brightness-[0.75] saturate-[0.85] transition-transform duration-1000 group-hover:scale-105" style={{ backgroundImage: `url(${img5})` }}></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-coastal-900/60 via-transparent to-transparent z-10"></div>
+                  <div className="absolute bottom-6 left-6 right-6 z-20">
+                    <span className="font-serif italic text-white/90 text-base">"Frente a la inmensidad del mar..."</span>
+                  </div>
+                </Interactive3DTilt>
 
-            {/* Bento Item 6: After Party */}
-            <Interactive3DTilt maxRotation={4} className="md:col-span-6 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group overflow-hidden reveal reveal-d3">
-              <SunGlintOverlay periodic={true} />
-              <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">04</span>
-              <div className="relative z-10">
-                <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">02:00 hrs</p>
-                <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-4">After Party</h3>
-                <p className="font-serif italic text-[14px] md:text-[15px] text-accent-bronze/90 leading-relaxed mb-4">Hacienda el Centenario</p>
-                <p className="font-sans text-[11px] text-coastal-800/60 leading-relaxed">Tequila, Jalisco</p>
+                <Interactive3DTilt maxRotation={4} className="md:col-span-7 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group overflow-hidden reveal reveal-d2">
+                  <SunGlintOverlay periodic={true} />
+                  <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">04</span>
+                  <div className="relative z-10">
+                    <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">18:00 hrs</p>
+                    <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-4">Recepción</h3>
+                    <p className="font-serif italic text-[14px] md:text-[15px] text-accent-bronze/90 leading-relaxed mb-4">Puerto Vallarta, Jalisco</p>
+                  </div>
+                  <a className="self-start inline-flex items-center gap-2 font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/20 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm cursor-none relative overflow-hidden z-10" href="https://maps.app.goo.gl/4aU8xRd7SW8dXKmq9" target="_blank" rel="noopener" {...cursorHoverProps}>
+                    <SunGlintOverlay periodic={false} />
+                    <svg className="w-3 h-3 stroke-current fill-none relative z-10" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                    <span className="relative z-10">Ver en Mapa</span>
+                  </a>
+                </Interactive3DTilt>
+
+                <Interactive3DTilt maxRotation={4} className="md:col-span-12 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col md:flex-row md:items-center md:justify-between gap-6 group overflow-hidden reveal reveal-d3">
+                  <SunGlintOverlay periodic={true} />
+                  <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">05</span>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                      <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold">23:30 hrs</p>
+                      <span className="font-sans text-[7.5px] tracking-wider uppercase border border-accent-gold/50 text-accent-gold px-2 py-0.5 rounded-sm">Opcional</span>
+                    </div>
+                    <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-2">After Party</h3>
+                    <p className="font-serif italic text-[14px] text-accent-bronze/90">Puerto Vallarta, Jalisco</p>
+                  </div>
+                  <div className="relative z-10 shrink-0">
+                    <p className="font-serif italic text-[12px] text-coastal-800/50 max-w-xs leading-relaxed">Continúa la celebración con nosotros. ¡Nos encantaría tenerte!</p>
+                  </div>
+                </Interactive3DTilt>
               </div>
-            </Interactive3DTilt>
+            </div>
+
+            {/* ── DÍA 05 SEPTIEMBRE ── */}
+            <div>
+              <div className="flex items-center gap-3 mb-6 reveal">
+                <div className="w-6 h-[1px] bg-accent-gold/50 shrink-0"></div>
+                <span className="font-sans text-[8px] tracking-super uppercase text-accent-gold font-semibold whitespace-nowrap">Viernes · 05 de Septiembre</span>
+                <div className="flex-1 h-[1px] bg-accent-gold/20"></div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <Interactive3DTilt maxRotation={4} className="md:col-span-6 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group overflow-hidden reveal">
+                  <SunGlintOverlay periodic={true} />
+                  <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">06</span>
+                  <div className="relative z-10">
+                    <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">Todo el Día</p>
+                    <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-4">Día Libre</h3>
+                    <p className="font-serif italic text-[14px] text-coastal-800/60 leading-relaxed">Disfruta Puerto Vallarta a tu ritmo</p>
+                  </div>
+                </Interactive3DTilt>
+
+                <Interactive3DTilt maxRotation={4} className="md:col-span-6 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group overflow-hidden reveal reveal-d1">
+                  <SunGlintOverlay periodic={true} />
+                  <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">07</span>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                      <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold">Actividad</p>
+                      <span className="font-sans text-[7.5px] tracking-wider uppercase border border-accent-gold/50 text-accent-gold px-2 py-0.5 rounded-sm">Opcional</span>
+                    </div>
+                    <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-4">Tour en Barco Pirata</h3>
+                    <p className="font-serif italic text-[13px] text-coastal-800/60 leading-relaxed">Nos encantaría que nos acompañaran a pasear por Puerto Vallarta. La actividad es opcional y cada invitado cubre su acceso.</p>
+                  </div>
+                </Interactive3DTilt>
+              </div>
+            </div>
+
+            {/* ── DÍA 06 SEPTIEMBRE ── */}
+            <div>
+              <div className="flex items-center gap-3 mb-6 reveal">
+                <div className="w-6 h-[1px] bg-accent-gold/50 shrink-0"></div>
+                <span className="font-sans text-[8px] tracking-super uppercase text-accent-gold font-semibold whitespace-nowrap">Sábado · 06 de Septiembre</span>
+                <div className="flex-1 h-[1px] bg-accent-gold/20"></div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                <Interactive3DTilt maxRotation={4} className="md:col-span-6 md:col-start-4 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col items-center justify-center text-center group overflow-hidden reveal">
+                  <SunGlintOverlay periodic={true} />
+                  <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">08</span>
+                  <div className="relative z-10">
+                    <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">12:00 hrs</p>
+                    <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-4">Check-Out</h3>
+                    <p className="font-serif italic text-[14px] text-coastal-800/60 leading-relaxed">Hotel Meliá · Puerto Vallarta</p>
+                  </div>
+                </Interactive3DTilt>
+              </div>
+            </div>
 
           </div>
         </div>
@@ -1025,24 +1212,35 @@ export default function WeddingInvitation() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 bg-white border border-sand-200/60 rounded-sm shadow-lg overflow-hidden select-text reveal reveal-d3">
-            <div className="lg:col-span-5 min-h-[300px] lg:min-h-full overflow-hidden relative group">
-              <div className="absolute inset-0 bg-cover bg-center filter brightness-[0.9] saturate-[0.8] transition-transform duration-1000 group-hover:scale-105" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1598554747436-c9293d6a588f?w=800&q=80')" }}></div>
-              <div className="absolute inset-0 bg-gradient-to-t from-coastal-900/40 via-transparent to-transparent"></div>
-              <div className="absolute bottom-8 left-8 right-8">
-                <span className="font-serif italic text-white text-lg">Exclusividad &amp; Calma</span>
-              </div>
-            </div>
-
-            <div className="lg:col-span-7 p-8 md:p-16 flex flex-col justify-center text-center lg:text-left">
-              <p className="font-serif italic text-3xl text-coastal-800 mb-6">Rigurosa Etiqueta de Playa</p>
-              <p className="font-serif italic text-[14.5px] leading-relaxed text-coastal-800/70 mb-10 max-w-lg mx-auto lg:mx-0">
-                Agradecemos su asistencia vistiendo con elegancia y frescura costera:<br /><br />
-                <strong className="font-sans not-italic text-xs uppercase tracking-wider text-accent-gold">Para ellas:</strong> Vestido largo formal en telas fluidas (tonos tierra, arena, terracota, oliva o neutros).<br />
-                <strong className="font-sans not-italic text-xs uppercase tracking-wider text-accent-gold">Para ellos:</strong> Traje de lino o algodón en tonos claros (beige, arena o gris pálido) con camisa de lino, sin corbata.
+          <div className="bg-white border border-sand-200/60 rounded-sm shadow-lg overflow-hidden select-text reveal reveal-d3">
+            <div className="p-8 md:p-16 flex flex-col justify-center text-center max-w-3xl mx-auto">
+              <p className="font-serif italic text-3xl text-coastal-800 mb-6">Beach Formal</p>
+              <p className="font-serif italic text-[14.5px] leading-relaxed text-coastal-800/70 mb-6 max-w-lg mx-auto">
+                Agradecemos su asistencia vistiendo con elegancia costera:<br /><br />
+                <strong className="font-sans not-italic text-xs uppercase tracking-wider text-accent-gold">Damas:</strong> Beach Formal — vestido largo formal en telas fluidas.<br />
+                <strong className="font-sans not-italic text-xs uppercase tracking-wider text-accent-gold">Caballeros:</strong> Elegant Beach Attire — traje de lino o algodón en tonos claros.
               </p>
 
-              <div className="flex justify-center lg:justify-start gap-12 md:gap-16 border-t border-sand-200/60 pt-10 select-none">
+              <div className="mb-8 max-w-lg mx-auto">
+                <p className="font-sans text-[8px] tracking-super uppercase text-accent-gold/70 mb-3">Inspiración · Take a look!</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { url: "https://pin.it/JDceWXYN7", label: "Ref. 1" },
+                    { url: "https://pin.it/1Oy7b2XRp", label: "Ref. 2" },
+                    { url: "https://pin.it/5exbeTN1w", label: "Ref. 3" },
+                    { url: "https://pin.it/5E4Sh8PHS", label: "Ref. 4" },
+                    { url: "https://pin.it/7MaV8uygD", label: "Ref. 5" },
+                    { url: "https://pin.it/77LMC6zKg", label: "Ref. 6" },
+                  ].map((pin) => (
+                    <a key={pin.url} href={pin.url} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 font-sans text-[7.5px] tracking-wider uppercase border border-coastal-800/15 hover:border-accent-gold text-coastal-800/60 hover:text-coastal-800 px-3 py-1.5 transition-all duration-300 rounded-sm cursor-none" {...cursorHoverProps}>
+                      <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/></svg>
+                      {pin.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-center gap-12 md:gap-16 border-t border-sand-200/60 pt-10 select-none">
                 <div className="flex flex-col items-center gap-3">
                   <svg width="40" height="60" viewBox="0 0 44 68" fill="none" className="stroke-accent-bronze/70" strokeWidth="0.8">
                     <circle cx="22" cy="9" r="7.5" />
@@ -1103,18 +1301,32 @@ export default function WeddingInvitation() {
             </Interactive3DTilt>
 
             {/* Liverpool */}
-            <Interactive3DTilt maxRotation={4} className="md:col-span-5 bg-white border border-sand-200/60 p-10 md:p-12 text-center flex flex-col items-center justify-center gap-4 rounded-sm relative group overflow-hidden reveal reveal-d3">
+            <Interactive3DTilt maxRotation={4} className="md:col-span-5 bg-white border border-sand-200/60 p-8 md:p-10 text-center flex flex-col items-center justify-center gap-4 rounded-sm relative group overflow-hidden reveal reveal-d3">
               <SunGlintOverlay periodic={true} />
               <div className="absolute inset-1.5 border border-sand-200/40 rounded-[1px] pointer-events-none z-10"></div>
               <span className="font-serif italic text-xs text-accent-gold tracking-[0.2em] relative z-10">II</span>
               <p className="font-serif italic font-light text-2xl text-coastal-800 relative z-10">Liverpool</p>
               <p className="font-serif italic text-[13.5px] leading-relaxed text-coastal-800/60 max-w-xs mb-4 relative z-10">
-                Mesa de regalos física u online en almacenes Liverpool.<br />
-                <span className="font-sans not-italic text-[11px] text-coastal-800 block mt-2 font-medium">Evento: #5555555</span>
+                Mesa de regalos física u online en almacenes Liverpool.
               </p>
-              <a className="inline-flex items-center justify-center font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/20 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm select-none cursor-none relative overflow-hidden z-10" href="https://www.liverpool.com.mx/tienda/mesa-de-regalos/evento/5555555" target="_blank" rel="noopener" {...cursorHoverProps}>
+              <a className="inline-flex items-center justify-center font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/20 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm select-none cursor-none relative overflow-hidden z-10" href="https://mesaderegalos.liverpool.com.mx/milistaderegalos/51965594" target="_blank" rel="noopener" {...cursorHoverProps}>
                 <SunGlintOverlay periodic={false} />
                 <span className="relative z-10">Ir a Mesa de Regalos</span>
+              </a>
+            </Interactive3DTilt>
+
+            {/* Amazon */}
+            <Interactive3DTilt maxRotation={4} className="md:col-span-5 md:col-start-8 bg-white border border-sand-200/60 p-8 md:p-10 text-center flex flex-col items-center justify-center gap-4 rounded-sm relative group overflow-hidden reveal reveal-d4">
+              <SunGlintOverlay periodic={true} />
+              <div className="absolute inset-1.5 border border-sand-200/40 rounded-[1px] pointer-events-none z-10"></div>
+              <span className="font-serif italic text-xs text-accent-gold tracking-[0.2em] relative z-10">III</span>
+              <p className="font-serif italic font-light text-2xl text-coastal-800 relative z-10">Amazon</p>
+              <p className="font-serif italic text-[13.5px] leading-relaxed text-coastal-800/60 max-w-xs mb-4 relative z-10">
+                Lista de regalos online en Amazon México.
+              </p>
+              <a className="inline-flex items-center justify-center font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/20 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm select-none cursor-none relative overflow-hidden z-10" href="https://www.amazon.com.mx/wedding/guest-view/Z24ES7T2EJ8K" target="_blank" rel="noopener" {...cursorHoverProps}>
+                <SunGlintOverlay periodic={false} />
+                <span className="relative z-10">Ver Lista Amazon</span>
               </a>
             </Interactive3DTilt>
           </div>
@@ -1136,61 +1348,23 @@ export default function WeddingInvitation() {
               <span className="w-12 h-[1px] bg-gradient-to-l from-transparent to-accent-gold"></span>
             </div>
 
-            <p className="font-serif italic text-base md:text-lg text-coastal-800/60 mt-8 reveal reveal-d2">Tenemos estas opciones para que disfrutes tu estancia el día de nuestra boda.</p>
+            <p className="font-serif italic text-base md:text-lg text-coastal-800/60 mt-8 reveal reveal-d2">La recepción de bienvenida y el hospedaje principal se llevan a cabo en Hotel Meliá Puerto Vallarta.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 select-text reveal reveal-d3">
 
-            {/* Hotel 1 */}
-            <Interactive3DTilt maxRotation={3} className="bg-white border border-sand-200/60 rounded-sm overflow-hidden shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group">
+            {/* Hotel Principal */}
+            <Interactive3DTilt maxRotation={3} className="md:col-span-1 md:col-start-2 bg-white border border-sand-200/60 rounded-sm overflow-hidden shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group">
               <SunGlintOverlay periodic={true} />
               <div className="overflow-hidden aspect-[4/3] border-b border-sand-100 relative select-none">
-                <img className="w-full h-full object-cover transition-all duration-[1200ms] ease-out group-hover:scale-105 filter saturate-[0.6] brightness-[0.92] group-hover:saturate-[0.9] group-hover:brightness-100" src="https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=600&q=75" alt="Matices Hotel de Barricas" loading="lazy" />
+                <img className="w-full h-full object-cover transition-all duration-[1200ms] ease-out group-hover:scale-105 filter saturate-[0.6] brightness-[0.92] group-hover:saturate-[0.9] group-hover:brightness-100" src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=75" alt="Hotel Meliá Puerto Vallarta" loading="lazy" />
                 <div className="absolute inset-0 bg-gradient-to-t from-coastal-900/30 to-transparent"></div>
               </div>
               <div className="p-8 flex flex-col items-center text-center flex-grow relative z-10">
                 <span className="font-sans text-[7px] tracking-[4px] text-accent-gold block mb-3">★★★★★</span>
-                <h3 className="font-serif italic font-light text-lg md:text-xl text-coastal-800 mb-2 leading-tight">Matices Hotel de Barricas</h3>
-                <p className="font-serif italic text-xs text-coastal-800/50 mb-6 uppercase tracking-wider">Tequila, Jalisco</p>
-                <a className="inline-flex items-center gap-2 font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/10 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm select-none cursor-none relative overflow-hidden z-10" href="https://maps.google.com/?q=Matices+Hotel+de+Barricas+Tequila" target="_blank" rel="noopener" {...cursorHoverProps}>
-                  <SunGlintOverlay periodic={false} />
-                  <svg className="w-3 h-3 stroke-current fill-none relative z-10" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                  <span className="relative z-10">Ver Ubicación</span>
-                </a>
-              </div>
-            </Interactive3DTilt>
-
-            {/* Hotel 2 */}
-            <Interactive3DTilt maxRotation={3} className="bg-white border border-sand-200/60 rounded-sm overflow-hidden shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group">
-              <SunGlintOverlay periodic={true} />
-              <div className="overflow-hidden aspect-[4/3] border-b border-sand-100 relative select-none">
-                <img className="w-full h-full object-cover transition-all duration-[1200ms] ease-out group-hover:scale-105 filter saturate-[0.6] brightness-[0.92] group-hover:saturate-[0.9] group-hover:brightness-100" src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=75" alt="Room Mate Gerard Hotel" loading="lazy" />
-                <div className="absolute inset-0 bg-gradient-to-t from-coastal-900/30 to-transparent"></div>
-              </div>
-              <div className="p-8 flex flex-col items-center text-center flex-grow relative z-10">
-                <span className="font-sans text-[7px] tracking-[4px] text-accent-gold block mb-3">★★★★</span>
-                <h3 className="font-serif italic font-light text-lg md:text-xl text-coastal-800 mb-2 leading-tight">Room Mate Gerard Hotel</h3>
-                <p className="font-serif italic text-xs text-coastal-800/50 mb-6 uppercase tracking-wider">Guadalajara, Jalisco</p>
-                <a className="inline-flex items-center gap-2 font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/10 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm select-none cursor-none relative overflow-hidden z-10" href="https://maps.google.com/?q=Room+Mate+Gerard+Hotel+Guadalajara" target="_blank" rel="noopener" {...cursorHoverProps}>
-                  <SunGlintOverlay periodic={false} />
-                  <svg className="w-3 h-3 stroke-current fill-none relative z-10" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>
-                  <span className="relative z-10">Ver Ubicación</span>
-                </a>
-              </div>
-            </Interactive3DTilt>
-
-            {/* Hotel 3 */}
-            <Interactive3DTilt maxRotation={3} className="bg-white border border-sand-200/60 rounded-sm overflow-hidden shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group">
-              <SunGlintOverlay periodic={true} />
-              <div className="overflow-hidden aspect-[4/3] border-b border-sand-100 relative select-none">
-                <img className="w-full h-full object-cover transition-all duration-[1200ms] ease-out group-hover:scale-105 filter saturate-[0.6] brightness-[0.92] group-hover:saturate-[0.9] group-hover:brightness-100" src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=75" alt="Hotel Villa Tequila" loading="lazy" />
-                <div className="absolute inset-0 bg-gradient-to-t from-coastal-900/30 to-transparent"></div>
-              </div>
-              <div className="p-8 flex flex-col items-center text-center flex-grow relative z-10">
-                <span className="font-sans text-[7px] tracking-[4px] text-accent-gold block mb-3">★★★★</span>
-                <h3 className="font-serif italic font-light text-lg md:text-xl text-coastal-800 mb-2 leading-tight">Hotel Villa Tequila</h3>
-                <p className="font-serif italic text-xs text-coastal-800/50 mb-6 uppercase tracking-wider">Tequila, Jalisco</p>
-                <a className="inline-flex items-center gap-2 font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/10 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm select-none cursor-none relative overflow-hidden z-10" href="https://maps.google.com/?q=Hotel+Villa+Tequila+Jalisco" target="_blank" rel="noopener" {...cursorHoverProps}>
+                <h3 className="font-serif italic font-light text-lg md:text-xl text-coastal-800 mb-2 leading-tight">Hotel Meliá</h3>
+                <p className="font-serif italic text-xs text-coastal-800/50 mb-6 uppercase tracking-wider">Puerto Vallarta, Jalisco</p>
+                <a className="inline-flex items-center gap-2 font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/10 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm select-none cursor-none relative overflow-hidden z-10" href="https://maps.app.goo.gl/37bXyMvnZqbDVrEt9" target="_blank" rel="noopener" {...cursorHoverProps}>
                   <SunGlintOverlay periodic={false} />
                   <svg className="w-3 h-3 stroke-current fill-none relative z-10" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>
                   <span className="relative z-10">Ver Ubicación</span>
@@ -1301,13 +1475,13 @@ export default function WeddingInvitation() {
                 <div className="flex flex-col gap-8 animate-fadeIn">
                   <div className="text-center py-4 select-none">
                     <p className="font-serif italic text-lg text-coastal-800 mb-2">Hola, {rsvpData.nombre}</p>
-                    <p className="font-serif italic text-sm text-coastal-800/60 leading-relaxed">¿Contamos con tu grata presencia el 21 de Diciembre?</p>
+                    <p className="font-serif italic text-sm text-coastal-800/60 leading-relaxed">¿Contamos con tu grata presencia el 4 de Septiembre?</p>
                   </div>
 
                   <div className="flex flex-col gap-4 border-t border-b border-sand-200/60 py-6 select-none">
                     <label
                       onClick={() => setRsvpData(prev => ({ ...prev, asistencia: 'si' }))}
-                      className={`flex items-center justify-between p-4 border rounded-sm transition-all duration-500 cursor-none ${rsvpData.asistencia === 'si' ? 'bg-[#FAF8F5] border-accent-gold/80 shadow-md' : 'bg-transparent border-sand-200/50 hover:border-accent-gold/40'}`}
+                      className={`flex items-center justify-between p-4 border rounded-sm transition-all duration-500 cursor-none ${rsvpData.asistencia === 'si' ? 'bg-[#F5F0E6] border-accent-gold/80 shadow-md' : 'bg-transparent border-sand-200/50 hover:border-accent-gold/40'}`}
                       {...cursorHoverProps}
                     >
                       <div className="flex items-center gap-4">
@@ -1321,7 +1495,7 @@ export default function WeddingInvitation() {
 
                     <label
                       onClick={() => setRsvpData(prev => ({ ...prev, asistencia: 'no' }))}
-                      className={`flex items-center justify-between p-4 border rounded-sm transition-all duration-500 cursor-none ${rsvpData.asistencia === 'no' ? 'bg-[#FAF8F5] border-accent-gold/80 shadow-md' : 'bg-transparent border-sand-200/50 hover:border-accent-gold/40'}`}
+                      className={`flex items-center justify-between p-4 border rounded-sm transition-all duration-500 cursor-none ${rsvpData.asistencia === 'no' ? 'bg-[#F5F0E6] border-accent-gold/80 shadow-md' : 'bg-transparent border-sand-200/50 hover:border-accent-gold/40'}`}
                       {...cursorHoverProps}
                     >
                       <div className="flex items-center gap-4">
@@ -1337,19 +1511,28 @@ export default function WeddingInvitation() {
                   <div className="flex gap-4 select-none">
                     <button
                       onClick={() => setRsvpStep(1)}
-                      className="w-1/3 font-sans text-[9px] tracking-super uppercase border border-coastal-800/10 text-coastal-800 hover:border-coastal-800 py-4 transition-all duration-500 rounded-sm font-semibold cursor-none"
+                      disabled={rsvpLoading}
+                      className="w-1/3 font-sans text-[9px] tracking-super uppercase border border-coastal-800/10 text-coastal-800 hover:border-coastal-800 py-4 transition-all duration-500 rounded-sm font-semibold cursor-none disabled:opacity-40"
                       {...cursorHoverProps}
                     >
                       Atrás
                     </button>
                     <button
                       onClick={handleNextStep}
-                      disabled={!rsvpData.asistencia}
-                      className="w-2/3 font-sans text-[9px] tracking-super uppercase bg-coastal-800 hover:bg-accent-gold text-white hover:text-white py-4 transition-all duration-500 rounded-sm font-semibold shadow-md disabled:opacity-40 disabled:hover:bg-coastal-800 disabled:hover:text-white cursor-none relative overflow-hidden group"
+                      disabled={!rsvpData.asistencia || rsvpLoading}
+                      className="w-2/3 font-sans text-[9px] tracking-super uppercase bg-coastal-800 hover:bg-accent-gold text-white py-4 transition-all duration-500 rounded-sm font-semibold shadow-md disabled:opacity-40 cursor-none relative overflow-hidden group"
                       {...cursorHoverProps}
                     >
                       <SunGlintOverlay periodic={false} />
-                      <span className="relative z-10">{rsvpData.asistencia === 'no' ? 'Confirmar' : 'Continuar'}</span>
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        {rsvpLoading && (
+                          <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                          </svg>
+                        )}
+                        {rsvpLoading ? 'Enviando...' : rsvpData.asistencia === 'no' ? 'Confirmar' : 'Continuar'}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -1418,27 +1601,43 @@ export default function WeddingInvitation() {
                     />
                   </div>
 
+                  {rsvpError && (
+                    <p className="font-sans text-[10px] text-red-500/80 text-center -mt-4">
+                      Ocurrió un error al enviar. Verifica tu conexión e intenta de nuevo.
+                    </p>
+                  )}
+
                   <div className="flex gap-4 select-none">
                     <button
                       onClick={() => setRsvpStep(2)}
-                      className="w-1/3 font-sans text-[9px] tracking-super uppercase border border-coastal-800/10 text-coastal-800 hover:border-coastal-800 py-4 transition-all duration-500 rounded-sm font-semibold cursor-none"
+                      disabled={rsvpLoading}
+                      className="w-1/3 font-sans text-[9px] tracking-super uppercase border border-coastal-800/10 text-coastal-800 hover:border-coastal-800 py-4 transition-all duration-500 rounded-sm font-semibold cursor-none disabled:opacity-40"
                       {...cursorHoverProps}
                     >
                       Atrás
                     </button>
                     <button
                       onClick={handleNextStep}
-                      className="w-2/3 font-sans text-[9px] tracking-super uppercase bg-coastal-800 hover:bg-accent-gold text-white hover:text-white py-4 transition-all duration-500 rounded-sm font-semibold shadow-md cursor-none relative overflow-hidden group"
+                      disabled={rsvpLoading}
+                      className="w-2/3 font-sans text-[9px] tracking-super uppercase bg-coastal-800 hover:bg-accent-gold text-white py-4 transition-all duration-500 rounded-sm font-semibold shadow-md cursor-none relative overflow-hidden group disabled:opacity-70"
                       {...cursorHoverProps}
                     >
                       <SunGlintOverlay periodic={false} />
-                      <span className="relative z-10">Confirmar Asistencia</span>
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        {rsvpLoading && (
+                          <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                          </svg>
+                        )}
+                        {rsvpLoading ? 'Enviando...' : 'Confirmar Asistencia'}
+                      </span>
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* STEP 4: Success confirmation screen */}
+              {/* STEP 4: Success / Error screen */}
               {rsvpStep === 4 && (
                 <div className="text-center py-10 animate-fadeIn select-none">
                   <span className="font-serif italic text-3xl text-accent-gold block mb-6">◆</span>
@@ -1468,7 +1667,7 @@ export default function WeddingInvitation() {
 
             <span className="font-serif italic font-light text-4xl md:text-6xl text-coastal-800 block mb-6 flex justify-center items-center">
               <span className="font-serif not-italic text-accent-gold text-3xl md:text-5xl mr-1 font-light">#</span>
-              <ElegantTextReveal text="JaimeyLucia" />
+              <ElegantTextReveal text="AndreayGustavo" />
             </span>
 
             <p className="font-serif italic text-base text-coastal-800/60 max-w-sm mx-auto leading-relaxed reveal reveal-d2">
@@ -1476,36 +1675,39 @@ export default function WeddingInvitation() {
             </p>
           </div>
 
-          {/* 1. UPLOAD PHOTO CTA BUTTON */}
+          {/* 1. MEGA UPLOAD CTA */}
           <div className="max-w-xl mx-auto mb-20 text-center select-none reveal reveal-d2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handlePhotoUpload}
-              accept="image/*"
-              multiple
-              className="hidden"
-            />
-
-            {/* Bento Asymmetrical Upload Button */}
-            <button
-              onClick={triggerFileInput}
+            <a
+              href={MEGA_FILE_REQUEST.startsWith('http') ? MEGA_FILE_REQUEST : '#'}
+              target="_blank"
+              rel="noopener noreferrer"
               className="w-full bg-sand-100/50 hover:bg-white border-2 border-dashed border-accent-gold/30 hover:border-accent-gold p-8 md:p-10 flex flex-col items-center justify-center gap-4 rounded-sm transition-all duration-700 ease-out shadow-sm hover:shadow-xl cursor-none relative group overflow-hidden"
               {...cursorHoverProps}
             >
               <SunGlintOverlay periodic={true} />
-              <div className="w-12 h-12 rounded-full bg-accent-gold/10 flex items-center justify-center group-hover:bg-accent-gold group-hover:text-white text-accent-gold transition-all duration-500">
-                <svg className="w-5 h-5 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
+
+              {/* Ícono nube + flecha */}
+              <div className="w-14 h-14 rounded-full bg-accent-gold/10 flex items-center justify-center group-hover:bg-accent-gold group-hover:text-white text-accent-gold transition-all duration-500 relative z-10">
+                <svg className="w-6 h-6 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 16V8m0 0-3 3m3-3 3 3"/>
+                  <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
                 </svg>
               </div>
-              <div>
-                <p className="font-serif italic text-lg text-coastal-800">Compartir Fotos del Evento</p>
-                <p className="font-sans text-[9px] uppercase tracking-wider text-accent-bronze/70 mt-1">Presiona para cargar fotos desde tu celular</p>
+
+              <div className="relative z-10">
+                <p className="font-serif italic text-xl text-coastal-800 mb-1">Subir Fotos del Evento</p>
+                <p className="font-sans text-[8.5px] uppercase tracking-wider text-accent-bronze/70">
+                  Tus fotos se guardan directo en nuestra carpeta de MEGA
+                </p>
               </div>
-            </button>
+
+              {/* Chips informativos */}
+              <div className="flex flex-wrap justify-center gap-2 relative z-10 mt-1">
+                <span className="font-sans text-[7.5px] uppercase tracking-wider border border-accent-gold/30 text-accent-gold px-3 py-1 rounded-full">Sin límite</span>
+                <span className="font-sans text-[7.5px] uppercase tracking-wider border border-accent-gold/30 text-accent-gold px-3 py-1 rounded-full">Sin cuenta requerida</span>
+                <span className="font-sans text-[7.5px] uppercase tracking-wider border border-accent-gold/30 text-accent-gold px-3 py-1 rounded-full">Fotos y videos</span>
+              </div>
+            </a>
           </div>
 
           {/* 2. DYNAMIC GRID ASYMMETRIC LOOKBOOK */}
@@ -1520,7 +1722,7 @@ export default function WeddingInvitation() {
               else if (idx % 6 === 2) gridSpan = "md:col-span-12 aspect-[21/9] md:aspect-[32/10]";
               else if (idx % 6 === 3) gridSpan = "md:col-span-7 aspect-[4/3]";
               else if (idx % 6 === 4) gridSpan = "md:col-span-5 aspect-square md:aspect-[3/4]";
-              else if (idx % 6 === 5) gridSpan = "md:col-span-12 aspect-[21/9]";
+              else if (idx % 6 === 5) gridSpan = "col-span-12 md:col-span-8 md:col-start-3 aspect-[3/4]";
 
               return (
                 <div
@@ -1531,23 +1733,20 @@ export default function WeddingInvitation() {
                 >
                   <img
                     src={src}
-                    alt={`Foto Lookbook Boda - ${idx + 1}`}
+                    alt={`Foto Lookbook Boda Andrea y Gustavo - ${idx + 1}`}
                     loading="lazy"
                     className="w-full h-full object-cover filter saturate-[0.6] brightness-[0.95] group-hover:scale-105 group-hover:saturate-[0.9] group-hover:brightness-100 transition-all duration-[1200ms] ease-out"
+                    style={{ objectPosition: idx % 6 === 5 ? 'center center' : 'center' }}
                   />
 
                   {/* Subtle fade-overlay */}
                   <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-500"></div>
 
-                  {/* Indicator for Guest Uploaded Images */}
-                  {idx < guestPhotos.length && (
-                    <div className="absolute top-4 left-4 bg-sand-50/80 backdrop-blur-sm px-2.5 py-1 rounded-[1px] border border-accent-gold/20 select-none">
-                      <span className="font-sans text-[8px] uppercase tracking-wider text-accent-bronze font-semibold">Foto Invitado</span>
-                    </div>
-                  )}
                 </div>
               );
             })}
+
+
           </div>
         </div>
       </section>
@@ -1555,11 +1754,11 @@ export default function WeddingInvitation() {
       {/* ══ FOOTER SECTION (DEEP OCEAN TWILIGHT) ══ */}
       <footer className="bg-coastal-900 py-16 px-6 text-center border-t border-white/[0.03] select-none relative z-10">
         <p className="font-display text-lg md:text-2xl text-white/80 tracking-widest mb-4">
-          J <span className="font-serif italic text-accent-gold/60 text-sm md:text-base mx-1">&amp;</span> L
+          A <span className="font-serif italic text-accent-gold/60 text-sm md:text-base mx-1">&amp;</span> G
         </p>
-        <p className="font-sans text-[9px] tracking-super uppercase text-white/20 mb-8">XXI · XII · MMXXVI</p>
+        <p className="font-sans text-[9px] tracking-super uppercase text-white/20 mb-8">IV · IX · MMXXVI</p>
         <div className="w-10 h-[1px] bg-accent-gold/25 mx-auto mb-8"></div>
-        <p className="font-serif italic text-[11px] md:text-xs text-white/30 tracking-[0.1em]">Con amor · En la inmensidad del océano</p>
+        <p className="font-serif italic text-[11px] md:text-xs text-white/30 tracking-[0.1em]">Con amor · Frente al Mar · Puerto Vallarta</p>
       </footer>
 
     </div>
