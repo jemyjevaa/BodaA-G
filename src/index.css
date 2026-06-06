@@ -18,7 +18,11 @@
   --color-accent-bronze: #A38971;
   --color-accent-softnavy: #634F3D;
   
+<<<<<<< HEAD
   --font-serif: "Cormorant Garamond", Georgia, serif;
+=======
+  --font-serif: "Melodrama", Georgia, serif;
+>>>>>>> develop
   --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-display: "Cinzel Decorative", serif;
 }
@@ -137,6 +141,22 @@
   }
 }
 
+<<<<<<< HEAD
+=======
+/* Ken Burns — zoom cinematográfico lento para el hero */
+@keyframes kenBurns {
+  0%   { transform: scale(1.04) translate(0%, 0%); }
+  33%  { transform: scale(1.10) translate(-1.2%, 0.6%); }
+  66%  { transform: scale(1.07) translate(1%, -0.8%); }
+  100% { transform: scale(1.04) translate(0%, 0%); }
+}
+
+.animate-kenBurns {
+  animation: kenBurns 22s ease-in-out infinite;
+  will-change: transform;
+}
+
+>>>>>>> develop
 /* Breath animations for arrows and discoveries */
 @keyframes breathe {
   0%, 100% { transform: translateY(0); opacity: 0.65; }
@@ -210,7 +230,11 @@
 }
 
 .monogram-amp {
+<<<<<<< HEAD
   font-family: "Cormorant Garamond", Georgia, serif;
+=======
+  font-family: "Melodrama", Georgia, serif;
+>>>>>>> develop
   font-style: italic;
   font-weight: 300;
   font-size: 30px;
@@ -238,6 +262,16 @@
   color: #52644E;
 }
 
+<<<<<<< HEAD
+=======
+/* Improve legibility of serif fonts globally */
+.font-serif {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+>>>>>>> develop
 /* Perspective settings for envelope */
 .perspective-1600 {
   perspective: 1600px;

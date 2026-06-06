@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
+<<<<<<< HEAD
 import { motion } from 'framer-motion';
+=======
+>>>>>>> develop
 import img1 from './assets/image1.jpg';
 import img2 from './assets/Image2.jpg';
 import img3 from './assets/image3.jpg';
 import img4 from './assets/image4.jpg';
 import img5 from './assets/image5.jpg';
 import img6 from './assets/image6.jpg';
+<<<<<<< HEAD
 
 // ══════════════════════════════════════════════════
 // GOOGLE SHEETS WEBHOOK — URL de tu Apps Script
@@ -302,21 +306,46 @@ function ElegantTextReveal({ text, className = '', delay = 0 }: ElegantTextRevea
     </motion.span>
   );
 }
+=======
+import musicTrack from './music/ti-amo.mp3';
+import videoBg from './assets/video_web.mp4';
+
+import { SHEET_WEBHOOK, MEGA_FILE_REQUEST } from './config';
+import type { RSVPData } from './types';
+import { useCountdown } from './hooks/useCountdown';
+import { useCursor } from './hooks/useCursor';
+import { useScrollReveal } from './hooks/useScrollReveal';
+import CustomCursor from './components/CustomCursor';
+import AudioControl from './components/AudioControl';
+import Lightbox from './components/Lightbox';
+import EnvelopeIntro from './components/EnvelopeIntro';
+import SunGlintOverlay from './components/ui/SunGlintOverlay';
+import CoastalBreezeParticles from './components/ui/CoastalBreezeParticles';
+import Interactive3DTilt from './components/ui/Interactive3DTilt';
+import ElegantTextReveal from './components/ui/ElegantTextReveal';
+
+
+>>>>>>> develop
 
 export default function WeddingInvitation() {
   // ══════════════════════════════════════════════════
   // STATE MANAGEMENT
   // ══════════════════════════════════════════════════
 
+<<<<<<< HEAD
   // Interactive Entry states (3D Envelope & Preloader)
   const [isPreloaderHidden, setIsPreloaderHidden] = useState(false);
   const [isEnvelopeOpen, setIsEnvelopeOpen] = useState(false);
   const [isEnvelopeFadeOut, setIsEnvelopeFadeOut] = useState(false);
+=======
+  // Entry & scroll state
+>>>>>>> develop
   const [isScrollUnlocked, setIsScrollUnlocked] = useState(false);
 
   // Audio Playback state
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+<<<<<<< HEAD
 
   // Countdown state
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({
@@ -325,6 +354,12 @@ export default function WeddingInvitation() {
     minutes: '00',
     seconds: '00',
   });
+=======
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Countdown — via hook
+  const timeLeft = useCountdown('2026-09-04T15:00:00');
+>>>>>>> develop
 
   // RSVP Step-by-Step Flow states
   const [rsvpStep, setRsvpStep] = useState<1 | 2 | 3 | 4>(1);
@@ -346,10 +381,18 @@ export default function WeddingInvitation() {
   // Lightbox Viewer state
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+<<<<<<< HEAD
   // Custom Cursor coordinates (Desktop only)
   const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
   const [ringPos, setRingPos] = useState({ x: -100, y: -100 });
   const [isHovered, setIsHovered] = useState(false);
+=======
+  // Cursor — via hook
+  const { mousePos, ringPos, isHovered, cursorHoverProps } = useCursor();
+
+  // Scroll reveal — via hook
+  useScrollReveal(isScrollUnlocked);
+>>>>>>> develop
 
   const allPhotos = initialPhotos;
 
@@ -357,6 +400,7 @@ export default function WeddingInvitation() {
   // EFFECTS
   // ══════════════════════════════════════════════════
 
+<<<<<<< HEAD
   // 1. Initial preloader timer
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -451,12 +495,38 @@ export default function WeddingInvitation() {
     } else {
       document.body.style.overflow = 'hidden';
     }
+=======
+  // Precarga audio en memoria al montar + bloquea scroll hasta que el usuario entre
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    // Precarga el audio como blob para reproducción instantánea al tocar.
+    // Solo actualiza el src si el audio NO está sonando, para evitar
+    // interrumpir una reproducción que ya inició.
+    fetch(musicTrack)
+      .then(r => r.blob())
+      .then(blob => {
+        if (!audioRef.current) return;
+        if (!audioRef.current.paused) return; // ya sonando — no interrumpir
+        const url = URL.createObjectURL(blob);
+        audioRef.current.src = url;
+        audioRef.current.load();
+      })
+      .catch(() => {});
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  // Desbloquea el scroll al entrar
+  useEffect(() => {
+    if (isScrollUnlocked) document.body.style.overflow = '';
+    else document.body.style.overflow = 'hidden';
+>>>>>>> develop
   }, [isScrollUnlocked]);
 
   // ══════════════════════════════════════════════════
   // ACTIONS & HANDLERS
   // ══════════════════════════════════════════════════
 
+<<<<<<< HEAD
   // 3D Envelope Opening Trigger
   const handleOpenEnvelope = () => {
     if (isEnvelopeOpen) return;
@@ -501,6 +571,32 @@ export default function WeddingInvitation() {
     } else {
       audioRef.current.pause();
       setIsPlaying(false);
+=======
+  // El usuario presionó "Comenzar" en el sobre → inicia música + video
+  const handleBegin = () => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.volume = 0.5;
+      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+    }
+    if (videoRef.current) videoRef.current.play().catch(() => {});
+  };
+
+  // El sobre terminó su animación → mostrar la invitación
+  const handleEnvelopeComplete = () => {
+    setIsScrollUnlocked(true);
+  };
+
+  // Botón inferior: pausa / reanuda
+  const handleToggleAudio = () => {
+    if (!audioRef.current) return;
+    if (!audioRef.current.paused) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.volume = 0.5;
+      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+>>>>>>> develop
     }
   };
 
@@ -601,11 +697,15 @@ export default function WeddingInvitation() {
     document.body.removeChild(link);
   };
 
+<<<<<<< HEAD
   // Helper hover class injection
   const cursorHoverProps = {
     onMouseEnter: () => setIsHovered(true),
     onMouseLeave: () => setIsHovered(false)
   };
+=======
+
+>>>>>>> develop
 
   // ══════════════════════════════════════════════════
   // RENDER COMPONENT
@@ -619,6 +719,7 @@ export default function WeddingInvitation() {
         <CoastalBreezeParticles />
       </div>
 
+<<<<<<< HEAD
       {/* ══ CURSOR PERSONALIZADO (DESKTOP ONLY) ══ */}
       <div
         className="hidden lg:block fixed w-1.5 h-1.5 bg-accent-gold rounded-full pointer-events-none z-[20000] -translate-x-1/2 -translate-y-1/2 transition-[width,height,background-color] duration-200"
@@ -810,6 +911,26 @@ export default function WeddingInvitation() {
         <div className="monogram-line-h"></div>
         <p className="monogram-sub">IV · IX · MMXXVI</p>
       </div>
+=======
+      {/* Cursor personalizado — solo desktop */}
+      <CustomCursor mousePos={mousePos} ringPos={ringPos} isHovered={isHovered} />
+
+      {/* Botón de música flotante */}
+      <AudioControl isPlaying={isPlaying} onToggle={handleToggleAudio} cursorHoverProps={cursorHoverProps} />
+      <audio ref={audioRef} loop preload="auto" src={musicTrack} style={{ display: 'none' }} />
+
+      {/* Lightbox de fotos */}
+      <Lightbox
+        photos={allPhotos}
+        index={lightboxIndex}
+        onClose={() => setLightboxIndex(null)}
+        onNavigate={navigateLightbox}
+        cursorHoverProps={cursorHoverProps}
+      />
+
+      {/* Sobre de entrada — primera pantalla */}
+      <EnvelopeIntro onBegin={handleBegin} onComplete={handleEnvelopeComplete} />
+>>>>>>> develop
 
       {/* ══ NAV BAR (GLASSMORPHISM EDITORIAL) ══ */}
       <nav className="fixed top-0 left-0 right-0 z-50 h-14 md:h-16 flex items-center bg-sand-50/80 backdrop-blur-md border-b border-sand-200/40 select-none">
@@ -831,7 +952,25 @@ export default function WeddingInvitation() {
 
       {/* ══ HERO SECTION (LOOKBOOK LUXURY SUNSET) ══ */}
       <section className="min-h-screen flex flex-col items-center justify-center text-center px-6 py-24 relative overflow-hidden select-none">
+<<<<<<< HEAD
         <div className="absolute inset-0 bg-cover bg-center bg-no-repeat filter brightness-[0.45] saturate-[0.7] transition-transform duration-[4000ms] ease-out scale-105 hover:scale-100" style={{ backgroundImage: `url(${img2})` }}></div>
+=======
+        {/* Foto fallback con Ken Burns — visible inmediatamente mientras carga el video */}
+        <div
+          className="absolute inset-0 bg-cover bg-center animate-kenBurns brightness-[0.45] saturate-[0.7]"
+          style={{ backgroundImage: `url(${img2})` }}
+        />
+        {/* Video de fondo — reemplaza la foto cuando carga (7.7MB, faststart, muted = nunca bloqueado) */}
+        <video
+          ref={videoRef}
+          src={videoBg}
+          className="absolute inset-0 w-full h-full object-cover brightness-[0.45] saturate-[0.7]"
+          autoPlay
+          muted
+          loop
+          playsInline
+        />
+>>>>>>> develop
         <div className="absolute inset-0 bg-gradient-to-t from-coastal-900 via-transparent to-coastal-900/60 z-0"></div>
 
         <div className="relative z-10 flex flex-col items-center max-w-3xl mx-auto w-full">
@@ -839,10 +978,17 @@ export default function WeddingInvitation() {
 
           <div className="w-[1px] h-12 bg-gradient-to-b from-transparent to-accent-gold/50 mb-6 reveal reveal-d1"></div>
 
+<<<<<<< HEAD
           <h1 className="font-serif italic font-light text-5xl md:text-7xl lg:text-8xl text-white/95 tracking-wide leading-none mb-4 select-text flex flex-wrap justify-center items-center">
             <ElegantTextReveal text="Andrea" className="font-serif font-light text-white/95" />
             <span className="font-serif font-light italic text-accent-gold/90 text-4xl md:text-6xl lg:text-7xl mx-3 -translate-y-1 block select-none">&amp;</span>
             <ElegantTextReveal text="Gustavo" className="font-serif font-light text-white/95" delay={0.2} />
+=======
+          <h1 className="font-serif italic font-normal text-5xl md:text-7xl lg:text-8xl text-white/95 tracking-wide leading-none mb-4 select-text flex flex-wrap justify-center items-center">
+            <ElegantTextReveal text="Andrea" className="font-serif font-normal text-white/95" />
+            <span className="font-serif font-normal italic text-accent-gold/90 text-4xl md:text-6xl lg:text-7xl mx-3 -translate-y-1 block select-none">&amp;</span>
+            <ElegantTextReveal text="Gustavo" className="font-serif font-normal text-white/95" delay={0.2} />
+>>>>>>> develop
           </h1>
 
           <div className="flex items-center justify-center gap-4 mb-6 reveal reveal-d2">
@@ -866,11 +1012,16 @@ export default function WeddingInvitation() {
 
           <div className="w-24 h-[1px] bg-gradient-to-r from-transparent via-accent-gold/30 to-transparent mb-10 reveal reveal-d3"></div>
 
+<<<<<<< HEAD
           <p className="font-serif italic font-light text-base md:text-lg lg:text-xl text-white/70 leading-relaxed max-w-xl mb-12 reveal reveal-d3">
+=======
+          <p className="font-serif italic font-normal text-base md:text-lg lg:text-xl text-white/80 leading-relaxed max-w-xl mb-12 reveal reveal-d3">
+>>>>>>> develop
             Tenemos el honor de invitarlos a celebrar nuestro enlace matrimonial, con la bendición de Dios y acompañados de nuestros padres:
           </p>
 
           {/* Glass parents card */}
+<<<<<<< HEAD
           <div className="max-w-2xl w-full px-6 py-10 md:px-12 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-sm shadow-2xl relative select-text reveal reveal-d4">
             <div className="absolute inset-1.5 border border-accent-gold/10 rounded-[1px] pointer-events-none"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
@@ -885,6 +1036,30 @@ export default function WeddingInvitation() {
                 <p className="font-serif italic font-light text-[14px] md:text-[15px] text-white/80 leading-relaxed">
                   Gustavo Luján Flores
                 </p>
+=======
+          <div className="max-w-3xl w-full px-6 py-10 md:px-12 border border-white/10 bg-white/[0.02] backdrop-blur-md rounded-sm shadow-2xl relative select-text reveal reveal-d4">
+            <div className="absolute inset-1.5 border border-accent-gold/10 rounded-[1px] pointer-events-none"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+              <div className="flex flex-col items-center justify-center text-center">
+                <p className="font-sans text-[8px] tracking-super uppercase text-accent-gold/70 mb-3">Madre de la Novia</p>
+                <p className="font-serif italic font-normal text-[14px] md:text-[15px] text-white/90 leading-relaxed">
+                  María de la Luz Hernández Cruz
+                </p>
+              </div>
+              <div className="flex flex-col gap-6">
+                <div className="text-center">
+                  <p className="font-sans text-[8px] tracking-super uppercase text-accent-gold/70 mb-3">Padre del Novio</p>
+                  <p className="font-serif italic font-normal text-[14px] md:text-[15px] text-white/90 leading-relaxed">
+                    Gustavo Luján Flores
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="font-sans text-[8px] tracking-super uppercase text-accent-gold/70 mb-3">Madre del Novio</p>
+                  <p className="font-serif italic font-normal text-[14px] md:text-[15px] text-white/90 leading-relaxed">
+                    Rita Flores García
+                  </p>
+                </div>
+>>>>>>> develop
               </div>
             </div>
           </div>
@@ -932,9 +1107,15 @@ export default function WeddingInvitation() {
 
               <p className="font-sans text-[8px] tracking-super uppercase text-accent-gold font-semibold">Enlace Matrimonial</p>
 
+<<<<<<< HEAD
               <p className="font-serif italic font-light text-4xl md:text-5xl text-coastal-800 leading-tight">
                 Andrea<br />
                 <span className="text-accent-gold text-2xl md:text-3xl font-light">&amp;</span><br />
+=======
+              <p className="font-serif italic font-normal text-4xl md:text-5xl text-coastal-800 leading-tight">
+                Andrea<br />
+                <span className="text-accent-gold text-2xl md:text-3xl font-normal">&amp;</span><br />
+>>>>>>> develop
                 Gustavo
               </p>
 
@@ -969,7 +1150,11 @@ export default function WeddingInvitation() {
       <section id="countdown" className="py-24 md:py-32 px-6 bg-sand-100 border-t border-b border-sand-200/40 select-none">
         <div className="max-w-3xl mx-auto text-center">
           <span className="font-sans text-[9px] tracking-super uppercase text-accent-gold block mb-3 reveal">Tiempo Restante</span>
+<<<<<<< HEAD
           <h2 className="font-serif italic font-light text-3xl md:text-5xl text-coastal-800 tracking-wide mb-6 reveal reveal-d1">La Espera</h2>
+=======
+          <h2 className="font-serif italic font-normal text-3xl md:text-5xl text-coastal-800 tracking-wide mb-6 reveal reveal-d1">La Espera</h2>
+>>>>>>> develop
 
           <div className="flex items-center justify-center gap-4 mb-16 reveal reveal-d2">
             <span className="w-12 h-[1px] bg-gradient-to-r from-transparent to-accent-gold"></span>
@@ -980,22 +1165,38 @@ export default function WeddingInvitation() {
           <div className="flex flex-wrap justify-center gap-4 md:gap-8 reveal reveal-d3">
             <div className="cd-unit w-24 h-24 md:w-32 md:h-32 border border-accent-gold/25 rounded-full bg-sand-50/50 backdrop-blur-sm flex flex-col items-center justify-center shadow-sm transition-all duration-700 ease-out hover:scale-105 hover:border-accent-gold hover:shadow-lg relative cursor-none" {...cursorHoverProps}>
               <div className="absolute inset-1.5 border border-accent-gold/10 rounded-full pointer-events-none"></div>
+<<<<<<< HEAD
               <span className="font-serif font-light text-3xl md:text-4xl text-coastal-800 relative z-10 leading-none mb-1">{timeLeft.days}</span>
+=======
+              <span className="font-serif font-normal text-3xl md:text-4xl text-coastal-800 relative z-10 leading-none mb-1">{timeLeft.days}</span>
+>>>>>>> develop
               <span className="font-sans text-[8px] uppercase tracking-widest text-coastal-800/50 relative z-10">Días</span>
             </div>
             <div className="cd-unit w-24 h-24 md:w-32 md:h-32 border border-accent-gold/25 rounded-full bg-sand-50/50 backdrop-blur-sm flex flex-col items-center justify-center shadow-sm transition-all duration-700 ease-out hover:scale-105 hover:border-accent-gold hover:shadow-lg relative cursor-none" {...cursorHoverProps}>
               <div className="absolute inset-1.5 border border-accent-gold/10 rounded-full pointer-events-none"></div>
+<<<<<<< HEAD
               <span className="font-serif font-light text-3xl md:text-4xl text-coastal-800 relative z-10 leading-none mb-1">{timeLeft.hours}</span>
+=======
+              <span className="font-serif font-normal text-3xl md:text-4xl text-coastal-800 relative z-10 leading-none mb-1">{timeLeft.hours}</span>
+>>>>>>> develop
               <span className="font-sans text-[8px] uppercase tracking-widest text-coastal-800/50 relative z-10">Horas</span>
             </div>
             <div className="cd-unit w-24 h-24 md:w-32 md:h-32 border border-accent-gold/25 rounded-full bg-sand-50/50 backdrop-blur-sm flex flex-col items-center justify-center shadow-sm transition-all duration-700 ease-out hover:scale-105 hover:border-accent-gold hover:shadow-lg relative cursor-none" {...cursorHoverProps}>
               <div className="absolute inset-1.5 border border-accent-gold/10 rounded-full pointer-events-none"></div>
+<<<<<<< HEAD
               <span className="font-serif font-light text-3xl md:text-4xl text-coastal-800 relative z-10 leading-none mb-1">{timeLeft.minutes}</span>
+=======
+              <span className="font-serif font-normal text-3xl md:text-4xl text-coastal-800 relative z-10 leading-none mb-1">{timeLeft.minutes}</span>
+>>>>>>> develop
               <span className="font-sans text-[8px] uppercase tracking-widest text-coastal-800/50 relative z-10">Minutos</span>
             </div>
             <div className="cd-unit w-24 h-24 md:w-32 md:h-32 border border-accent-gold/25 rounded-full bg-sand-50/50 backdrop-blur-sm flex flex-col items-center justify-center shadow-sm transition-all duration-700 ease-out hover:scale-105 hover:border-accent-gold hover:shadow-lg relative cursor-none" {...cursorHoverProps}>
               <div className="absolute inset-1.5 border border-accent-gold/10 rounded-full pointer-events-none"></div>
+<<<<<<< HEAD
               <span className="font-serif font-light text-3xl md:text-4xl text-coastal-800 relative z-10 leading-none mb-1">{timeLeft.seconds}</span>
+=======
+              <span className="font-serif font-normal text-3xl md:text-4xl text-coastal-800 relative z-10 leading-none mb-1">{timeLeft.seconds}</span>
+>>>>>>> develop
               <span className="font-sans text-[8px] uppercase tracking-widest text-coastal-800/50 relative z-10">Segundos</span>
             </div>
           </div>
@@ -1007,7 +1208,11 @@ export default function WeddingInvitation() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <span className="font-sans text-[9px] tracking-super uppercase text-accent-gold block mb-3 reveal">El Gran Día</span>
+<<<<<<< HEAD
             <h2 className="font-serif italic font-light text-3xl md:text-5xl text-coastal-800 tracking-wide mb-6 flex justify-center">
+=======
+            <h2 className="font-serif italic font-normal text-3xl md:text-5xl text-coastal-800 tracking-wide mb-6 flex justify-center">
+>>>>>>> develop
               <ElegantTextReveal text="Itinerario" />
             </h2>
 
@@ -1041,7 +1246,11 @@ export default function WeddingInvitation() {
                   <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">01</span>
                   <div className="relative z-10 font-sans">
                     <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">15:00 hrs</p>
+<<<<<<< HEAD
                     <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-6">Recepción de Bienvenida</h3>
+=======
+                    <h3 className="font-serif italic font-normal text-2xl md:text-3xl text-coastal-800 mb-6">Recepción de Bienvenida</h3>
+>>>>>>> develop
                     <p className="font-serif italic text-[14px] md:text-[15px] text-accent-bronze/90 leading-relaxed mb-8 max-w-md">
                       Hotel Meliá<br />
                       <span className="font-sans not-italic text-[11px] text-coastal-800/60 block mt-2">Puerto Vallarta, Jalisco</span>
@@ -1069,7 +1278,11 @@ export default function WeddingInvitation() {
                   <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">02</span>
                   <div className="relative z-10 font-sans">
                     <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">15:00 hrs</p>
+<<<<<<< HEAD
                     <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-6">Ceremonia Religiosa</h3>
+=======
+                    <h3 className="font-serif italic font-normal text-2xl md:text-3xl text-coastal-800 mb-6">Ceremonia Religiosa</h3>
+>>>>>>> develop
                     <p className="font-serif italic text-[14px] md:text-[15px] text-accent-bronze/90 leading-relaxed mb-8 max-w-md">
                       Puerto Vallarta, Jalisco
                     </p>
@@ -1086,7 +1299,11 @@ export default function WeddingInvitation() {
                   <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">03</span>
                   <div className="relative z-10 font-sans">
                     <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">16:50 hrs</p>
+<<<<<<< HEAD
                     <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-6">Ceremonia Frente al Mar</h3>
+=======
+                    <h3 className="font-serif italic font-normal text-2xl md:text-3xl text-coastal-800 mb-6">Ceremonia Frente al Mar</h3>
+>>>>>>> develop
                     <p className="font-serif italic text-[14px] md:text-[15px] text-accent-bronze/90 leading-relaxed mb-8 max-w-md">
                       Puerto Vallarta, Jalisco
                     </p>
@@ -1111,7 +1328,11 @@ export default function WeddingInvitation() {
                   <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">04</span>
                   <div className="relative z-10">
                     <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">18:00 hrs</p>
+<<<<<<< HEAD
                     <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-4">Recepción</h3>
+=======
+                    <h3 className="font-serif italic font-normal text-2xl md:text-3xl text-coastal-800 mb-4">Recepción</h3>
+>>>>>>> develop
                     <p className="font-serif italic text-[14px] md:text-[15px] text-accent-bronze/90 leading-relaxed mb-4">Puerto Vallarta, Jalisco</p>
                   </div>
                   <a className="self-start inline-flex items-center gap-2 font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/20 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm cursor-none relative overflow-hidden z-10" href="https://maps.app.goo.gl/4aU8xRd7SW8dXKmq9" target="_blank" rel="noopener" {...cursorHoverProps}>
@@ -1147,12 +1368,17 @@ export default function WeddingInvitation() {
                 <div className="flex-1 h-[1px] bg-accent-gold/20"></div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+<<<<<<< HEAD
                 <Interactive3DTilt maxRotation={4} className="md:col-span-6 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group overflow-hidden reveal">
+=======
+                <Interactive3DTilt maxRotation={4} className="md:col-span-12 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col justify-between group overflow-hidden reveal">
+>>>>>>> develop
                   <SunGlintOverlay periodic={true} />
                   <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">06</span>
                   <div className="relative z-10">
                     <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">Todo el Día</p>
                     <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-4">Día Libre</h3>
+<<<<<<< HEAD
                     <p className="font-serif italic text-[14px] text-coastal-800/60 leading-relaxed">Disfruta Puerto Vallarta a tu ritmo</p>
                   </div>
                 </Interactive3DTilt>
@@ -1167,6 +1393,9 @@ export default function WeddingInvitation() {
                     </div>
                     <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-4">Tour en Barco Pirata</h3>
                     <p className="font-serif italic text-[13px] text-coastal-800/60 leading-relaxed">Nos encantaría que nos acompañaran a pasear por Puerto Vallarta. La actividad es opcional y cada invitado cubre su acceso.</p>
+=======
+                    <p className="font-serif italic text-[14px] text-coastal-800 leading-relaxed font-normal">Disfruta Puerto Vallarta a tu ritmo</p>
+>>>>>>> develop
                   </div>
                 </Interactive3DTilt>
               </div>
@@ -1180,9 +1409,15 @@ export default function WeddingInvitation() {
                 <div className="flex-1 h-[1px] bg-accent-gold/20"></div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+<<<<<<< HEAD
                 <Interactive3DTilt maxRotation={4} className="md:col-span-6 md:col-start-4 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col items-center justify-center text-center group overflow-hidden reveal">
                   <SunGlintOverlay periodic={true} />
                   <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">08</span>
+=======
+                <Interactive3DTilt maxRotation={4} className="md:col-span-12 bg-white border border-sand-200/60 p-8 md:p-10 rounded-sm shadow-sm hover:border-accent-gold hover:shadow-xl flex flex-col items-center justify-center text-center group overflow-hidden reveal">
+                  <SunGlintOverlay periodic={true} />
+                  <span className="absolute right-8 top-6 font-serif italic text-7xl md:text-8xl text-accent-gold/10 group-hover:text-accent-gold/20 transition-all duration-700 select-none pointer-events-none z-0">07</span>
+>>>>>>> develop
                   <div className="relative z-10">
                     <p className="font-sans text-[9px] tracking-super uppercase text-accent-gold font-semibold mb-2">12:00 hrs</p>
                     <h3 className="font-serif italic font-light text-2xl md:text-3xl text-coastal-800 mb-4">Check-Out</h3>
@@ -1201,7 +1436,11 @@ export default function WeddingInvitation() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <span className="font-sans text-[9px] tracking-super uppercase text-accent-gold block mb-3 reveal">Indumentaria</span>
+<<<<<<< HEAD
             <h2 className="font-serif italic font-light text-3xl md:text-5xl text-coastal-800 tracking-wide mb-6 flex justify-center">
+=======
+            <h2 className="font-serif italic font-normal text-3xl md:text-5xl text-coastal-800 tracking-wide mb-6 flex justify-center">
+>>>>>>> develop
               <ElegantTextReveal text="Dress Code" />
             </h2>
 
@@ -1240,6 +1479,32 @@ export default function WeddingInvitation() {
                 </div>
               </div>
 
+<<<<<<< HEAD
+=======
+              {/* Paleta de Colores */}
+              <div className="mb-10 mt-8">
+                <p className="font-sans text-[8px] tracking-super uppercase text-accent-gold/70 mb-4">Paleta de Colores Sugerida</p>
+                <div className="flex justify-center gap-6 flex-wrap">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-16 h-16 rounded-full shadow-md border border-sand-200/40 transition-transform hover:scale-110" style={{ backgroundColor: "#52644E" }}></div>
+                    <span className="font-sans text-[7px] uppercase tracking-wider text-coastal-800/70">Verde</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-16 h-16 rounded-full shadow-md border border-sand-200/40 transition-transform hover:scale-110" style={{ backgroundColor: "#634F3D" }}></div>
+                    <span className="font-sans text-[7px] uppercase tracking-wider text-coastal-800/70">Café</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-16 h-16 rounded-full shadow-md border border-sand-200/40 transition-transform hover:scale-110" style={{ backgroundColor: "#A38971" }}></div>
+                    <span className="font-sans text-[7px] uppercase tracking-wider text-coastal-800/70">Café Claro</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-16 h-16 rounded-full shadow-md border border-sand-200/40 transition-transform hover:scale-110" style={{ backgroundColor: "#C0A97E" }}></div>
+                    <span className="font-sans text-[7px] uppercase tracking-wider text-coastal-800/70">Beige</span>
+                  </div>
+                </div>
+              </div>
+
+>>>>>>> develop
               <div className="flex justify-center gap-12 md:gap-16 border-t border-sand-200/60 pt-10 select-none">
                 <div className="flex flex-col items-center gap-3">
                   <svg width="40" height="60" viewBox="0 0 44 68" fill="none" className="stroke-accent-bronze/70" strokeWidth="0.8">
@@ -1274,7 +1539,11 @@ export default function WeddingInvitation() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
             <span className="font-sans text-[9px] tracking-super uppercase text-accent-gold block mb-3 reveal">Mesa de</span>
+<<<<<<< HEAD
             <h2 className="font-serif italic font-light text-3xl md:text-5xl text-coastal-800 tracking-wide mb-6 flex justify-center">
+=======
+            <h2 className="font-serif italic font-normal text-3xl md:text-5xl text-coastal-800 tracking-wide mb-6 flex justify-center">
+>>>>>>> develop
               <ElegantTextReveal text="Regalos" />
             </h2>
 
@@ -1284,6 +1553,7 @@ export default function WeddingInvitation() {
               <span className="w-12 h-[1px] bg-gradient-to-l from-transparent to-accent-gold"></span>
             </div>
 
+<<<<<<< HEAD
             <p className="font-serif italic text-base md:text-lg text-coastal-800/60 mt-8 reveal reveal-d2">¡Gracias por formar parte de nuestro inicio como familia!</p>
           </div>
 
@@ -1307,6 +1577,19 @@ export default function WeddingInvitation() {
               <span className="font-serif italic text-xs text-accent-gold tracking-[0.2em] relative z-10">II</span>
               <p className="font-serif italic font-light text-2xl text-coastal-800 relative z-10">Liverpool</p>
               <p className="font-serif italic text-[13.5px] leading-relaxed text-coastal-800/60 max-w-xs mb-4 relative z-10">
+=======
+            <p className="font-serif italic text-base md:text-lg text-coastal-800 mt-8 reveal reveal-d2 font-normal">¡Gracias por formar parte de nuestro inicio como familia!</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-16 select-text">
+            {/* Liverpool */}
+            <Interactive3DTilt maxRotation={4} className="md:col-span-6 bg-white border border-sand-200/60 p-8 md:p-10 text-center flex flex-col items-center justify-center gap-4 rounded-sm relative group overflow-hidden reveal reveal-d3">
+              <SunGlintOverlay periodic={true} />
+              <div className="absolute inset-1.5 border border-sand-200/40 rounded-[1px] pointer-events-none z-10"></div>
+              <span className="font-serif italic text-xs text-accent-gold tracking-[0.2em] relative z-10">I</span>
+              <p className="font-serif italic font-light text-2xl text-coastal-800 relative z-10">Liverpool</p>
+              <p className="font-serif italic text-[13.5px] leading-relaxed text-coastal-800 max-w-xs mb-4 relative z-10 font-normal">
+>>>>>>> develop
                 Mesa de regalos física u online en almacenes Liverpool.
               </p>
               <a className="inline-flex items-center justify-center font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/20 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm select-none cursor-none relative overflow-hidden z-10" href="https://mesaderegalos.liverpool.com.mx/milistaderegalos/51965594" target="_blank" rel="noopener" {...cursorHoverProps}>
@@ -1316,12 +1599,21 @@ export default function WeddingInvitation() {
             </Interactive3DTilt>
 
             {/* Amazon */}
+<<<<<<< HEAD
             <Interactive3DTilt maxRotation={4} className="md:col-span-5 md:col-start-8 bg-white border border-sand-200/60 p-8 md:p-10 text-center flex flex-col items-center justify-center gap-4 rounded-sm relative group overflow-hidden reveal reveal-d4">
               <SunGlintOverlay periodic={true} />
               <div className="absolute inset-1.5 border border-sand-200/40 rounded-[1px] pointer-events-none z-10"></div>
               <span className="font-serif italic text-xs text-accent-gold tracking-[0.2em] relative z-10">III</span>
               <p className="font-serif italic font-light text-2xl text-coastal-800 relative z-10">Amazon</p>
               <p className="font-serif italic text-[13.5px] leading-relaxed text-coastal-800/60 max-w-xs mb-4 relative z-10">
+=======
+            <Interactive3DTilt maxRotation={4} className="md:col-span-6 bg-white border border-sand-200/60 p-8 md:p-10 text-center flex flex-col items-center justify-center gap-4 rounded-sm relative group overflow-hidden reveal reveal-d3">
+              <SunGlintOverlay periodic={true} />
+              <div className="absolute inset-1.5 border border-sand-200/40 rounded-[1px] pointer-events-none z-10"></div>
+              <span className="font-serif italic text-xs text-accent-gold tracking-[0.2em] relative z-10">II</span>
+              <p className="font-serif italic font-light text-2xl text-coastal-800 relative z-10">Amazon</p>
+              <p className="font-serif italic text-[13.5px] leading-relaxed text-coastal-800 max-w-xs mb-4 relative z-10 font-normal">
+>>>>>>> develop
                 Lista de regalos online en Amazon México.
               </p>
               <a className="inline-flex items-center justify-center font-sans text-[8.5px] tracking-wider uppercase border border-coastal-800/20 group-hover:border-accent-gold text-coastal-800 px-5 py-2.5 transition-all duration-500 bg-transparent hover:bg-coastal-800 hover:text-white rounded-sm select-none cursor-none relative overflow-hidden z-10" href="https://www.amazon.com.mx/wedding/guest-view/Z24ES7T2EJ8K" target="_blank" rel="noopener" {...cursorHoverProps}>
@@ -1329,6 +1621,21 @@ export default function WeddingInvitation() {
                 <span className="relative z-10">Ver Lista Amazon</span>
               </a>
             </Interactive3DTilt>
+<<<<<<< HEAD
+=======
+
+            {/* Lluvia de sobres */}
+            <Interactive3DTilt maxRotation={4} className="md:col-span-12 bg-sand-100/50 border border-sand-200/80 p-10 md:p-12 text-center flex flex-col items-center justify-center gap-4 rounded-sm relative group overflow-hidden reveal reveal-d4">
+              <SunGlintOverlay periodic={true} />
+              <div className="absolute inset-1.5 border border-accent-gold/15 rounded-[1px] pointer-events-none z-10"></div>
+              <span className="font-serif italic text-xs text-accent-gold tracking-[0.2em] relative z-10">III</span>
+              <p className="font-serif italic font-light text-2xl text-coastal-800 relative z-10">Lluvia de Sobres</p>
+              <p className="font-serif italic text-[13.5px] leading-relaxed text-coastal-800 max-w-xs mb-4 relative z-10 font-normal">
+                Tendremos una caja especial para sobres el día del evento en la recepción. Tu presencia es nuestro mayor regalo.
+              </p>
+              <span className="font-sans text-[8px] tracking-super uppercase border border-accent-gold/40 text-accent-gold px-5 py-2.5 bg-transparent rounded-sm select-none relative z-10">El día del evento</span>
+            </Interactive3DTilt>
+>>>>>>> develop
           </div>
         </div>
       </section>
@@ -1338,7 +1645,11 @@ export default function WeddingInvitation() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <span className="font-sans text-[9px] tracking-super uppercase text-accent-gold block mb-3 reveal">Alojamiento</span>
+<<<<<<< HEAD
             <h2 className="font-serif italic font-light text-3xl md:text-5xl text-coastal-800 tracking-wide mb-6 flex justify-center">
+=======
+            <h2 className="font-serif italic font-normal text-3xl md:text-5xl text-coastal-800 tracking-wide mb-6 flex justify-center">
+>>>>>>> develop
               <ElegantTextReveal text="Hospedaje" />
             </h2>
 
@@ -1348,7 +1659,11 @@ export default function WeddingInvitation() {
               <span className="w-12 h-[1px] bg-gradient-to-l from-transparent to-accent-gold"></span>
             </div>
 
+<<<<<<< HEAD
             <p className="font-serif italic text-base md:text-lg text-coastal-800/60 mt-8 reveal reveal-d2">La recepción de bienvenida y el hospedaje principal se llevan a cabo en Hotel Meliá Puerto Vallarta.</p>
+=======
+            <p className="font-serif italic text-base md:text-lg text-coastal-800 mt-8 reveal reveal-d2 font-normal">La recepción de bienvenida y el hospedaje principal se llevan a cabo en Hotel Meliá Puerto Vallarta.</p>
+>>>>>>> develop
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16 select-text reveal reveal-d3">
@@ -1383,7 +1698,11 @@ export default function WeddingInvitation() {
 
         <div className="max-w-3xl mx-auto relative z-10">
           <div className="text-center mb-16 select-none">
+<<<<<<< HEAD
             <span className="font-sans text-[9px] tracking-super uppercase text-accent-gold block mb-3 reveal">Confirmación</span>
+=======
+            <span className="font-sans text-[9px] tracking-super uppercase text-accent-gold block mb-3 reveal">Confirmación al After Party</span>
+>>>>>>> develop
             <h2 className="font-serif italic font-light text-3xl md:text-5xl text-white/90 tracking-wide mb-6 flex justify-center">
               <ElegantTextReveal text="¿Nos Acompañas?" />
             </h2>
@@ -1394,7 +1713,11 @@ export default function WeddingInvitation() {
               <span className="w-12 h-[1px] bg-gradient-to-l from-transparent to-accent-gold/40"></span>
             </div>
 
+<<<<<<< HEAD
             <p className="font-serif italic text-base md:text-lg text-white/50 max-w-xl mx-auto leading-relaxed mb-6 reveal reveal-d2">
+=======
+            <p className="font-serif italic text-base md:text-lg text-white/70 max-w-xl mx-auto leading-relaxed mb-6 reveal reveal-d2 font-normal">
+>>>>>>> develop
               ¡Queremos compartir este momento tan esperado contigo! Por favor ayúdanos confirmando tu asistencia.
             </p>
 
@@ -1436,25 +1759,41 @@ export default function WeddingInvitation() {
               {rsvpStep === 1 && (
                 <div className="flex flex-col gap-8 animate-fadeIn">
                   <div className="flex flex-col gap-2">
+<<<<<<< HEAD
                     <label className="font-sans text-[9px] uppercase tracking-super text-coastal-800/40 font-semibold">Nombre Completo del Invitado</label>
+=======
+                    <label className="font-sans text-[11px] uppercase tracking-super text-coastal-800/80 font-bold">Nombre Completo del Invitado</label>
+>>>>>>> develop
                     <input
                       type="text"
                       value={rsvpData.nombre}
                       onChange={(e) => setRsvpData(prev => ({ ...prev, nombre: e.target.value }))}
                       placeholder="Escribe tu nombre y apellido..."
                       required
+<<<<<<< HEAD
                       className="w-full bg-transparent border-b border-coastal-800/10 focus:border-accent-gold outline-none py-3 text-coastal-800 font-serif italic text-base transition-colors duration-300 placeholder-coastal-800/30"
+=======
+                      className="w-full bg-transparent border-b border-coastal-800/10 focus:border-accent-gold outline-none py-3 text-coastal-800 font-serif italic text-lg font-normal transition-colors duration-300 placeholder-coastal-800/70"
+>>>>>>> develop
                     />
                   </div>
 
                   <div className="flex flex-col gap-2">
+<<<<<<< HEAD
                     <label className="font-sans text-[9px] uppercase tracking-super text-coastal-800/40 font-semibold">Teléfono de Contacto</label>
+=======
+                    <label className="font-sans text-[11px] uppercase tracking-super text-coastal-800/80 font-bold">Teléfono de Contacto</label>
+>>>>>>> develop
                     <input
                       type="tel"
                       value={rsvpData.telefono}
                       onChange={(e) => setRsvpData(prev => ({ ...prev, telefono: e.target.value }))}
                       placeholder="+52 33 0000 0000"
+<<<<<<< HEAD
                       className="w-full bg-transparent border-b border-coastal-800/10 focus:border-accent-gold outline-none py-3 text-coastal-800 font-serif italic text-base transition-colors duration-300 placeholder-coastal-800/30"
+=======
+                      className="w-full bg-transparent border-b border-coastal-800/10 focus:border-accent-gold outline-none py-3 text-coastal-800 font-serif italic text-lg font-normal transition-colors duration-300 placeholder-coastal-800/70"
+>>>>>>> develop
                     />
                   </div>
 
@@ -1475,7 +1814,11 @@ export default function WeddingInvitation() {
                 <div className="flex flex-col gap-8 animate-fadeIn">
                   <div className="text-center py-4 select-none">
                     <p className="font-serif italic text-lg text-coastal-800 mb-2">Hola, {rsvpData.nombre}</p>
+<<<<<<< HEAD
                     <p className="font-serif italic text-sm text-coastal-800/60 leading-relaxed">¿Contamos con tu grata presencia el 4 de Septiembre?</p>
+=======
+                    <p className="font-serif italic text-sm text-coastal-800 leading-relaxed font-normal">¿Contamos con tu grata presencia el 4 de Septiembre en nuestra After Party?</p>
+>>>>>>> develop
                   </div>
 
                   <div className="flex flex-col gap-4 border-t border-b border-sand-200/60 py-6 select-none">
@@ -1543,28 +1886,48 @@ export default function WeddingInvitation() {
                 <div className="flex flex-col gap-8 animate-fadeIn">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="flex flex-col gap-2">
+<<<<<<< HEAD
                       <label className="font-sans text-[9px] uppercase tracking-super text-coastal-800/40 font-semibold">Número de Pases a Reservar</label>
+=======
+                      <label className="font-sans text-[11px] uppercase tracking-super text-coastal-800/80 font-bold">Número de Pases a Reservar</label>
+>>>>>>> develop
                       <div className="relative">
                         <select
                           value={rsvpData.personas}
                           onChange={(e) => setRsvpData(prev => ({ ...prev, personas: Number(e.target.value) }))}
+<<<<<<< HEAD
                           className="w-full bg-transparent border-b border-coastal-800/10 focus:border-accent-gold outline-none py-2 text-coastal-800 font-serif italic text-base transition-colors duration-300 appearance-none rounded-none cursor-pointer"
+=======
+                          className="w-full bg-transparent border-b border-coastal-800/10 focus:border-accent-gold outline-none py-2 text-coastal-800 font-serif italic text-lg font-normal transition-colors duration-300 appearance-none rounded-none cursor-pointer"
+>>>>>>> develop
                         >
                           {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
                             <option key={num} value={num} className="bg-sand-100 font-serif italic py-2">{num} {num === 1 ? 'Persona' : 'Personas'}</option>
                           ))}
                         </select>
+<<<<<<< HEAD
                         <span className="absolute right-2 bottom-3 text-coastal-800/40 pointer-events-none text-xs">&#9662;</span>
+=======
+                        <span className="absolute right-2 bottom-3 text-coastal-800/70 pointer-events-none text-xs">&#9662;</span>
+>>>>>>> develop
                       </div>
                     </div>
 
                     <div className="flex flex-col gap-2">
+<<<<<<< HEAD
                       <label className="font-sans text-[9px] uppercase tracking-super text-coastal-800/40 font-semibold">Restricciones o Preferencia de Menú</label>
+=======
+                      <label className="font-sans text-[11px] uppercase tracking-super text-coastal-800/80 font-bold">Restricciones o Preferencia de Menú</label>
+>>>>>>> develop
                       <div className="relative">
                         <select
                           value={rsvpData.dieta}
                           onChange={(e) => setRsvpData(prev => ({ ...prev, dieta: e.target.value }))}
+<<<<<<< HEAD
                           className="w-full bg-transparent border-b border-coastal-800/10 focus:border-accent-gold outline-none py-2 text-coastal-800 font-serif italic text-base transition-colors duration-300 appearance-none rounded-none cursor-pointer"
+=======
+                          className="w-full bg-transparent border-b border-coastal-800/10 focus:border-accent-gold outline-none py-2 text-coastal-800 font-serif italic text-lg font-normal transition-colors duration-300 appearance-none rounded-none cursor-pointer"
+>>>>>>> develop
                         >
                           <option value="sin_restriccion" className="bg-sand-100 font-serif italic py-2">Sin Restricciones</option>
                           <option value="vegetariano" className="bg-sand-100 font-serif italic py-2">Vegetariano</option>
@@ -1572,32 +1935,52 @@ export default function WeddingInvitation() {
                           <option value="sin_gluten" className="bg-sand-100 font-serif italic py-2">Sin Gluten</option>
                           <option value="alergia" className="bg-sand-100 font-serif italic py-2">Tengo una Alergia</option>
                         </select>
+<<<<<<< HEAD
                         <span className="absolute right-2 bottom-3 text-coastal-800/40 pointer-events-none text-xs">&#9662;</span>
+=======
+                        <span className="absolute right-2 bottom-3 text-coastal-800/70 pointer-events-none text-xs">&#9662;</span>
+>>>>>>> develop
                       </div>
                     </div>
                   </div>
 
                   {rsvpData.dieta === 'alergia' && (
                     <div className="flex flex-col gap-2 animate-fadeIn">
+<<<<<<< HEAD
                       <label className="font-sans text-[9px] uppercase tracking-super text-coastal-800/40 font-semibold">Especificar Alergia / Detalles alimentarios</label>
+=======
+                      <label className="font-sans text-[11px] uppercase tracking-super text-coastal-800/80 font-bold">Especificar Alergia / Detalles alimentarios</label>
+>>>>>>> develop
                       <input
                         type="text"
                         value={rsvpData.alergiaDetalles}
                         onChange={(e) => setRsvpData(prev => ({ ...prev, alergiaDetalles: e.target.value }))}
                         placeholder="Ej. Nueces, mariscos..."
+<<<<<<< HEAD
                         className="w-full bg-transparent border-b border-coastal-800/10 focus:border-accent-gold outline-none py-2 text-coastal-800 font-serif italic text-base transition-colors duration-300 placeholder-coastal-800/30"
+=======
+                        className="w-full bg-transparent border-b border-coastal-800/10 focus:border-accent-gold outline-none py-2 text-coastal-800 font-serif italic text-lg font-normal transition-colors duration-300 placeholder-coastal-800/70"
+>>>>>>> develop
                       />
                     </div>
                   )}
 
                   <div className="flex flex-col gap-2">
+<<<<<<< HEAD
                     <label className="font-sans text-[9px] uppercase tracking-super text-coastal-800/40 font-semibold">Mensaje para los Novios</label>
+=======
+                    <label className="font-sans text-[11px] uppercase tracking-super text-coastal-800/80 font-bold">Mensaje para los Novios</label>
+>>>>>>> develop
                     <textarea
                       value={rsvpData.mensaje}
                       onChange={(e) => setRsvpData(prev => ({ ...prev, mensaje: e.target.value }))}
                       placeholder="Escribe un mensaje de cariño o buenos deseos..."
                       rows={2}
+<<<<<<< HEAD
                       className="w-full bg-transparent border-b border-coastal-800/10 focus:border-accent-gold outline-none py-2 text-coastal-800 font-serif italic text-base transition-colors duration-300 placeholder-coastal-800/30 resize-none"
+=======
+                      className="w-full bg-transparent border-b border-coastal-800/10 focus:border-accent-gold outline-none py-2 text-coastal-800 font-serif italic text-lg font-normal transition-colors duration-300 placeholder-coastal-800/70 resize-none"
+>>>>>>> develop
                     />
                   </div>
 
@@ -1644,7 +2027,11 @@ export default function WeddingInvitation() {
                   <h3 className="font-serif italic font-light text-3xl text-coastal-800 mb-4">
                     {rsvpData.asistencia === 'si' ? '¡Gracias por confirmar!' : '¡Agradecemos tu respuesta!'}
                   </h3>
+<<<<<<< HEAD
                   <p className="font-serif italic text-base leading-relaxed text-coastal-800/60 max-w-sm mx-auto">
+=======
+                  <p className="font-serif italic text-base leading-relaxed text-coastal-800 max-w-sm mx-auto font-normal">
+>>>>>>> develop
                     {rsvpData.asistencia === 'si' ? (
                       <>Hemos recibido tu respuesta con mucho cariño.<br />Los esperamos en el paradisíaco gran día.</>
                     ) : (
@@ -1665,12 +2052,21 @@ export default function WeddingInvitation() {
           <div className="text-center mb-12">
             <span className="font-sans text-[9px] tracking-super uppercase text-accent-gold block mb-3 reveal">Lookbook Interactivo</span>
 
+<<<<<<< HEAD
             <span className="font-serif italic font-light text-4xl md:text-6xl text-coastal-800 block mb-6 flex justify-center items-center">
               <span className="font-serif not-italic text-accent-gold text-3xl md:text-5xl mr-1 font-light">#</span>
               <ElegantTextReveal text="AndreayGustavo" />
             </span>
 
             <p className="font-serif italic text-base text-coastal-800/60 max-w-sm mx-auto leading-relaxed reveal reveal-d2">
+=======
+            <span className="font-serif italic font-normal text-4xl md:text-6xl text-coastal-800 block mb-6 flex justify-center items-center">
+              <span className="font-serif not-italic text-accent-gold text-3xl md:text-5xl mr-1 font-normal">#</span>
+              <ElegantTextReveal text="AndreayGustavo" />
+            </span>
+
+            <p className="font-serif italic text-base text-coastal-800 max-w-sm mx-auto leading-relaxed reveal reveal-d2 font-normal">
+>>>>>>> develop
               Ayúdanos a capturar cada instante eterno del evento compartiendo tus fotos capturadas desde tu celular.
             </p>
           </div>
