@@ -1,0 +1,285 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sand-50: #F5F0E6;
+  --color-sand-100: #E9DEC1;
+  --color-sand-200: #D9CCAA;
+  --color-sand-300: #CCBA90;
+  --color-sand-400: #C0A97E;
+  --color-sand-500: #A38971;
+
+  --color-coastal-50: #EEF0EC;
+  --color-coastal-100: #D4DCCE;
+  --color-coastal-200: #ADBCA5;
+  --color-coastal-800: #52644E;
+  --color-coastal-900: #2D3E29;
+
+  --color-accent-gold: #C0A97E;
+  --color-accent-bronze: #A38971;
+  --color-accent-softnavy: #634F3D;
+  
+  --font-serif: "Melodrama", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-display: "Cinzel Decorative", serif;
+}
+
+/* Custom Letter Spacing */
+.tracking-super {
+  letter-spacing: 0.35em;
+}
+
+/* Cotton-Linen Premium Digital Paper Texture */
+.linen-bg {
+  background-image: 
+    radial-gradient(rgba(197, 168, 128, 0.04) 1px, transparent 1px),
+    linear-gradient(to right, rgba(197, 168, 128, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(197, 168, 128, 0.015) 1px, transparent 1px);
+  background-size: 16px 16px, 8px 8px, 8px 8px;
+  background-repeat: repeat;
+}
+
+/* HD Grain Noise Overlay representing premium cotton feel */
+.grain-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.035;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  z-index: 1;
+}
+
+/* Waving Fabric keyframes simulating shifting soft shadows in wind */
+@keyframes vientoLino {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate3d(1.2%, 0.8%, 0) scale(1.025) rotate(0.3deg);
+  }
+  66% {
+    transform: translate3d(-0.8%, 1.2%, 0) scale(1.01) rotate(-0.3deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+}
+
+.viento-lino-active {
+  will-change: transform;
+  animation: vientoLino 25s ease-in-out infinite;
+}
+
+/* "Destello de Sol sobre el Agua" (Gold Glint Sweep Overlay) */
+@keyframes sunGlint {
+  0% {
+    transform: translateX(-160%) skewX(-25deg);
+  }
+  35%, 100% {
+    transform: translateX(160%) skewX(-25deg);
+  }
+}
+
+.sun-glint-effect {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.1) 40%,
+    rgba(255, 245, 215, 0.45) 48%,
+    rgba(255, 255, 255, 0.65) 50%,
+    rgba(255, 245, 215, 0.45) 52%,
+    rgba(255, 255, 255, 0.1) 60%,
+    transparent 65%
+  );
+  background-size: 200% 100%;
+  mix-blend-mode: overlay;
+  z-index: 20;
+}
+
+.animate-sunGlint {
+  animation: sunGlint 8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Interactive sweeping when hovering a parent with 'group' */
+.group:hover .sun-glint-effect,
+.group:active .sun-glint-effect {
+  animation: sunGlint 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Card Depth Perspective Container */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+
+/* EQ Music Equilizer Waves bouncing keyframe */
+@keyframes bounceWave {
+  0% { transform: scaleY(0.15); }
+  100% { transform: scaleY(1); }
+}
+
+/* Interactive Wax Seal pulse keyframe */
+@keyframes sealPulse {
+  0%, 100% { 
+    transform: scale(1); 
+    box-shadow: 0 10px 30px rgba(15, 26, 32, 0.3), 0 0 0 0px rgba(197, 168, 128, 0.2); 
+  }
+  50% { 
+    transform: scale(1.04); 
+    box-shadow: 0 15px 40px rgba(15, 26, 32, 0.45), 0 0 15px 5px rgba(197, 168, 128, 0.25); 
+  }
+}
+
+/* Ken Burns — zoom cinematográfico lento para el hero */
+@keyframes kenBurns {
+  0%   { transform: scale(1.04) translate(0%, 0%); }
+  33%  { transform: scale(1.10) translate(-1.2%, 0.6%); }
+  66%  { transform: scale(1.07) translate(1%, -0.8%); }
+  100% { transform: scale(1.04) translate(0%, 0%); }
+}
+
+.animate-kenBurns {
+  animation: kenBurns 22s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Breath animations for arrows and discoveries */
+@keyframes breathe {
+  0%, 100% { transform: translateY(0); opacity: 0.65; }
+  50% { transform: translateY(8px); opacity: 1; }
+}
+
+/* Standard FadeIn animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* Monogram loading pulse */
+@keyframes pulseMonogram {
+  0%, 100% { opacity: 0.6; transform: scale(0.98); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+/* ══ SCROLL REVEAL STYLES ══ */
+.reveal {
+  opacity: 0;
+  transform: translateY(35px);
+  transition: opacity 1.2s cubic-bezier(0.215, 0.61, 0.355, 1), transform 1.2s cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-d1 { transition-delay: 0.1s; }
+.reveal-d2 { transition-delay: 0.2s; }
+.reveal-d3 { transition-delay: 0.3s; }
+.reveal-d4 { transition-delay: 0.4s; }
+
+/* ══ STANDALONE PRELOADER OVERLAY ══ */
+#preloader {
+  position: fixed;
+  inset: 0;
+  background-color: #F5F0E6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10010;
+  transition: opacity 1.2s cubic-bezier(0.25, 1, 0.5, 1), visibility 1.2s;
+}
+
+#preloader.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.monogram {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: "Cinzel Decorative", serif;
+  font-size: 46px;
+  color: #C0A97E;
+  animation: pulseMonogram 2.5s infinite ease-in-out;
+}
+
+.monogram-initial {
+  font-weight: 400;
+}
+
+.monogram-amp {
+  font-family: "Melodrama", Georgia, serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 30px;
+  color: #A38971;
+}
+
+.monogram-line-h {
+  width: 55px;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(192, 169, 126, 0.5), transparent);
+  margin: 18px 0;
+}
+
+.monogram-sub {
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  font-size: 8.5px;
+  letter-spacing: 0.32em;
+  color: #A38971;
+  text-transform: uppercase;
+}
+
+/* Custom selection background for luxury touch */
+::selection {
+  background-color: rgba(192, 169, 126, 0.2);
+  color: #52644E;
+}
+
+/* Improve legibility of serif fonts globally */
+.font-serif {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Perspective settings for envelope */
+.perspective-1600 {
+  perspective: 1600px;
+}
+.rotate-x-16 {
+  transform: rotateX(16deg);
+}
+.rotate-x-12 {
+  transform: rotateX(12deg);
+}
+.rotate-x-10 {
+  transform: rotateX(10deg);
+}
+.-rotate-y-8 {
+  transform: rotateY(-8deg);
+}
+.-rotate-y-3 {
+  transform: rotateY(-3deg);
+}
+.-rotate-z-3 {
+  transform: rotateZ(-3deg);
+}
+.-rotate-z-1 {
+  transform: rotateZ(-1deg);
+}
